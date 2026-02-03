@@ -1,27 +1,43 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Search, X, Loader2, Calendar, User, Music } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Track, Week } from '../types';
-import { cn, getMedalColor } from '../lib/utils';
+import { SearchInput } from './search/SearchInput';
+import { RecentSearches } from './search/RecentSearches';
+import { SearchResults } from './search/SearchResults';
 
 interface CommandSearchProps {
   isOpen: boolean;
   onClose: () => void;
   weeks: Week[];
   onSelectResult: (weekId: string, trackId: string) => void;
+  onSelectUser: (username: string) => void;
 }
 
-export const CommandSearch: React.FC<CommandSearchProps> = ({ isOpen, onClose, weeks, onSelectResult }) => {
-  const [query, setQuery] = useState('');
-  const [results, setResults] = useState<Track[]>([]);
-  const [loading, setLoading] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+type SearchResultItem = 
+  | { type: 'track'; data: Track }
+  | { type: 'user'; username: string; count: number };
 
-  // Focus input on open
+export const CommandSearch: React.FC<CommandSearchProps> = ({ isOpen, onClose, weeks, onSelectResult, onSelectUser }) => {
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<SearchResultItem[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [recentUsers, setRecentUsers] = useState<string[]>([]);
+
+  // Load Recents on Mount
   useEffect(() => {
-    if (isOpen) {
-      setTimeout(() => inputRef.current?.focus(), 50);
-    } else {
+    const stored = localStorage.getItem('dj_destiny_recent_users');
+    if (stored) {
+      try {
+        setRecentUsers(JSON.parse(stored));
+      } catch (e) {
+        console.error("Failed to parse recent users", e);
+      }
+    }
+  }, []);
+
+  // Reset on close
+  useEffect(() => {
+    if (!isOpen) {
       setQuery('');
       setResults([]);
     }
@@ -36,6 +52,26 @@ export const CommandSearch: React.FC<CommandSearchProps> = ({ isOpen, onClose, w
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
+  const saveRecentUser = (username: string) => {
+    // Remove if exists to move to top, limit to 5
+    const newRecents = [username, ...recentUsers.filter(u => u !== username)].slice(0, 5);
+    setRecentUsers(newRecents);
+    localStorage.setItem('dj_destiny_recent_users', JSON.stringify(newRecents));
+  };
+
+  const removeRecentUser = (e: React.MouseEvent, username: string) => {
+    e.stopPropagation();
+    const newRecents = recentUsers.filter(u => u !== username);
+    setRecentUsers(newRecents);
+    localStorage.setItem('dj_destiny_recent_users', JSON.stringify(newRecents));
+  };
+
+  const handleSelectUser = (username: string) => {
+    onSelectUser(username);
+    saveRecentUser(username);
+    onClose();
+  };
+
   // Debounced Search
   useEffect(() => {
     const timer = setTimeout(async () => {
@@ -46,19 +82,47 @@ export const CommandSearch: React.FC<CommandSearchProps> = ({ isOpen, onClose, w
 
       setLoading(true);
       
-      // ILIKE query for title OR artist OR submitter
-      // Note: This requires the db column types to be text.
-      const { data, error } = await supabase
-        .from('tracks')
-        .select('*')
-        .or(`title.ilike.%${query}%,artists.ilike.%${query}%,submitted_by.ilike.%${query}%`)
-        .order('created_at', { ascending: false })
-        .limit(20);
+      try {
+        // 1. Fetch Tracks matching Title OR Artist OR Submitter
+        const { data: trackData, error } = await supabase
+          .from('tracks')
+          .select('*')
+          .or(`title.ilike.%${query}%,artists.ilike.%${query}%,submitted_by.ilike.%${query}%`)
+          .order('created_at', { ascending: false })
+          .limit(30);
 
-      if (data) {
-        setResults(data as Track[]);
+        if (trackData) {
+          const finalResults: SearchResultItem[] = [];
+          const tracks = trackData as Track[];
+
+          // 2. Extract Unique Users from the results that match the query
+          const matchingUsers = new Map<string, number>();
+          const lowerQuery = query.toLowerCase();
+
+          // Aggregate users from the track findings
+          tracks.forEach(t => {
+            if (t.submitted_by && t.submitted_by.toLowerCase().includes(lowerQuery)) {
+              matchingUsers.set(t.submitted_by, (matchingUsers.get(t.submitted_by) || 0) + 1);
+            }
+          });
+
+          // Add User Results
+          Array.from(matchingUsers.entries()).forEach(([username, count]) => {
+            finalResults.push({ type: 'user', username, count });
+          });
+
+          // Add Track Results
+          tracks.forEach(t => {
+            finalResults.push({ type: 'track', data: t });
+          });
+
+          setResults(finalResults);
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }, 300);
 
     return () => clearTimeout(timer);
@@ -66,111 +130,65 @@ export const CommandSearch: React.FC<CommandSearchProps> = ({ isOpen, onClose, w
 
   if (!isOpen) return null;
 
-  const getWeekInfo = (weekId: string) => {
-    const week = weeks.find(w => w.id === weekId);
-    return week ? `${week.week_number}-oji Savaitė` : 'Nežinoma savaitė';
-  };
-
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh] px-4">
       {/* Backdrop */}
       <div 
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200" 
+        className="fixed inset-0 bg-black/80 backdrop-blur-md animate-in fade-in duration-300" 
         onClick={onClose}
       />
 
       {/* Modal */}
-      <div className="relative w-full max-w-2xl bg-zinc-950 border border-zinc-800 rounded-xl shadow-2xl shadow-black/50 overflow-hidden ring-1 ring-white/10 animate-in zoom-in-95 fade-in slide-in-from-top-4 duration-200 flex flex-col max-h-[60vh]">
+      <div className="relative w-full max-w-2xl bg-zinc-950 border border-zinc-800 rounded-2xl shadow-2xl shadow-black/50 overflow-hidden ring-1 ring-white/5 animate-in zoom-in-95 fade-in slide-in-from-top-4 duration-300 flex flex-col max-h-[70vh]">
         
-        {/* Header / Input */}
-        <div className="flex items-center px-4 py-4 border-b border-zinc-800 bg-zinc-900/30">
-          <Search className="w-5 h-5 text-zinc-500 mr-3" />
-          <input
-            ref={inputRef}
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            className="flex-1 bg-transparent border-none outline-none text-lg text-white placeholder:text-zinc-600 font-medium"
-            placeholder="Ieškoti dainų, atlikėjų, vartotojų..."
-          />
-          {loading ? (
-            <Loader2 className="w-5 h-5 text-zinc-600 animate-spin" />
-          ) : (
-            <div className="hidden sm:flex items-center gap-1">
-              <span className="text-[10px] bg-zinc-900 text-zinc-500 border border-zinc-800 rounded px-1.5 py-0.5 font-mono">ESC</span>
-            </div>
-          )}
-        </div>
+        <SearchInput 
+          query={query} 
+          setQuery={setQuery} 
+          onClose={onClose} 
+          loading={loading}
+        />
 
-        {/* Results List */}
-        <div className="overflow-y-auto p-2 custom-scrollbar">
-          {results.length > 0 ? (
-            <div className="space-y-1">
-              <div className="px-2 py-1.5 text-xs font-medium text-zinc-500 uppercase tracking-wider">
-                Rezultatai ({results.length})
-              </div>
-              {results.map((track) => (
-                <button
-                  key={track.id}
-                  onClick={() => onSelectResult(track.week_id, track.id)}
-                  className="w-full text-left group flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-zinc-900 border border-transparent hover:border-zinc-800 transition-all"
-                >
-                  {/* Position/Medal Indicator */}
-                  <div className={cn(
-                    "w-8 h-8 rounded-full flex items-center justify-center border text-xs font-bold shrink-0",
-                    track.medal === 'gold' ? "bg-yellow-500/10 border-yellow-500/30 text-yellow-500" :
-                    track.medal === 'silver' ? "bg-slate-400/10 border-slate-400/30 text-slate-400" :
-                    track.medal === 'bronze' ? "bg-amber-600/10 border-amber-600/30 text-amber-600" :
-                    "bg-zinc-900 border-zinc-800 text-zinc-500"
-                  )}>
-                    {track.position}
-                  </div>
-
-                  {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <span className="font-medium text-zinc-200 truncate group-hover:text-white transition-colors">
-                        {track.title}
-                      </span>
-                      <span className="text-zinc-600 text-sm">•</span>
-                      <span className="text-zinc-400 text-sm truncate">{track.artists}</span>
-                    </div>
-                    
-                    <div className="flex items-center gap-3 text-xs text-zinc-500">
-                      <div className="flex items-center gap-1">
-                        <Calendar className="w-3 h-3" />
-                        <span>{getWeekInfo(track.week_id)}</span>
-                      </div>
-                      {track.submitted_by && (
-                        <div className="flex items-center gap-1">
-                          <User className="w-3 h-3" />
-                          <span>{track.submitted_by}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          ) : query.trim() ? (
-            !loading && (
-              <div className="py-12 text-center text-zinc-600">
-                <Music className="w-12 h-12 mx-auto mb-3 opacity-20" />
-                <p>Nieko nerasta.</p>
-              </div>
-            )
-          ) : (
-            <div className="py-12 text-center text-zinc-600">
-              <Search className="w-12 h-12 mx-auto mb-3 opacity-20" />
-              <p>Įveskite paiešką...</p>
-            </div>
+        <div className="overflow-y-auto p-2 custom-scrollbar bg-black/20">
+          
+          {/* Recent Searches (When Query is Empty) */}
+          {!query && (
+            <RecentSearches 
+              recentUsers={recentUsers} 
+              onSelectUser={handleSelectUser} 
+              onRemoveUser={removeRecentUser} 
+            />
           )}
+
+          {/* Empty State when no query and no history */}
+          {!query && recentUsers.length === 0 && (
+             <div className="py-20 text-center text-zinc-700 select-none pointer-events-none">
+                <p className="text-sm">Įveskite bent 2 simbolius...</p>
+             </div>
+          )}
+
+          {/* Results */}
+          {query && (
+            <SearchResults 
+              results={results} 
+              query={query} 
+              onSelectUser={handleSelectUser} 
+              onSelectResult={(weekId, trackId) => {
+                onSelectResult(weekId, trackId);
+                onClose();
+              }}
+              weeks={weeks}
+            />
+          )}
+
         </div>
         
         {/* Footer */}
-        <div className="p-3 bg-zinc-900/50 border-t border-zinc-800 text-[10px] text-zinc-500 flex justify-between">
-           <span>Naudokite rodykles navigacijai</span>
-           <span>DJ Destiny Search</span>
+        <div className="px-4 py-3 bg-zinc-950 border-t border-zinc-800 flex justify-between items-center text-[10px] text-zinc-500">
+           <div className="flex gap-4">
+               <span className="flex items-center gap-1"><span className="bg-zinc-800 px-1 rounded">↵</span> pasirinkti</span>
+               <span className="flex items-center gap-1"><span className="bg-zinc-800 px-1 rounded">↑↓</span> naviguoti</span>
+           </div>
+           <span className="font-medium text-zinc-600">Smart Search v2.0</span>
         </div>
       </div>
     </div>

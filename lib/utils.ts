@@ -5,6 +5,10 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+export const generateId = () => {
+  return `id_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+};
+
 export const getMedalColor = (medal: string | null) => {
   switch (medal) {
     case 'gold':
