@@ -39,37 +39,42 @@ export const parseDiscordDump = (text: string, currentPositionStart: number = 1)
     }
 
     // 4. Parse Track Line
+    // Allow lines starting with numbers like "1. Artist - Title" or just "Artist - Title"
     const separatorRegex = /\s[–-]\s/;
-    if (!separatorRegex.test(line)) return;
+    
+    // If line starts with "1." or "01.", strip it to help parsing
+    let processingLine = line.replace(/^\d+\.\s*/, '');
 
-    const parts = line.split(separatorRegex);
+    if (!separatorRegex.test(processingLine)) return;
+
+    const parts = processingLine.split(separatorRegex);
     const artistRaw = parts[0].trim();
     let restOfLine = parts.slice(1).join(' - ').trim(); 
 
-    // A. Extract Medal / Position
-    let medal: 'gold' | 'silver' | 'bronze' | null = null;
+    // A. Extract Position & Clean Emojis
     let position = currentPosition;
 
+    // Explicit emoji overrides
     if (restOfLine.includes('🥇')) {
-      medal = 'gold';
       position = 1;
       restOfLine = restOfLine.replace('🥇', '');
     } else if (restOfLine.includes('🥈')) {
-      medal = 'silver';
       position = 2;
       restOfLine = restOfLine.replace('🥈', '');
     } else if (restOfLine.includes('🥉')) {
-      medal = 'bronze';
       position = 3;
       restOfLine = restOfLine.replace('🥉', '');
-    } else {
-      if (currentPosition < 4) currentPosition = 4;
-      position = currentPosition;
     }
+    
+    // B. Assign Medal based on Position (Automatic sync)
+    let medal: 'gold' | 'silver' | 'bronze' | null = null;
+    if (position === 1) medal = 'gold';
+    else if (position === 2) medal = 'silver';
+    else if (position === 3) medal = 'bronze';
 
-    // B. Extract Submitter
+    // C. Extract Submitter
     let submittedBy = null;
-    // Updated Regex: allow dots (.) and dashes (-) in usernames to handle "@S.H exe" correctly
+    // Regex: allow dots (.) and dashes (-) in usernames to handle "@S.H exe" correctly
     const submitterRegex = /(@[\w\p{L}\d_\s\.\-]+)|(\[[\w\p{L}\d_\s\.\-]+\])$/u;
     const submitterMatch = restOfLine.match(submitterRegex);
 
@@ -79,7 +84,7 @@ export const parseDiscordDump = (text: string, currentPositionStart: number = 1)
       submittedBy = rawSubmitter.replace(/^@/, '').replace(/^\[/, '').replace(/\]$/, '').trim();
     }
 
-    // C. Final Title Cleanup
+    // D. Final Title Cleanup
     const titleClean = restOfLine.trim();
 
     if (titleClean && artistRaw) {
@@ -91,14 +96,10 @@ export const parseDiscordDump = (text: string, currentPositionStart: number = 1)
         position: position,
         medal: medal
       });
+      // Increment for next loop
       currentPosition++; 
     }
   });
-
-  // Ensure parsing sorts by position roughly if implicit
-  // However, usually we want to preserve input order unless medals dictate otherwise
-  // But strictly speaking, the caller might want to sort.
-  // We will leave the array in order of parsing, but update position numbers if needed.
 
   return {
     weekNumber: detectedWeekNum,
