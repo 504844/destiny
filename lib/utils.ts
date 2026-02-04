@@ -35,3 +35,43 @@ export const getRowStyle = (medal: string | null) => {
       return 'border-l-2 border-l-transparent hover:bg-white/[0.02]';
   }
 };
+
+// Helper to translate English months to Lithuanian (Genitive case for dates)
+export const formatLithuanianDate = (dateString: string | null | undefined) => {
+  if (!dateString) return '';
+  
+  const months: Record<string, string> = {
+    'January': 'Sausio',
+    'February': 'Vasario',
+    'March': 'Kovo',
+    'April': 'Balandžio',
+    'May': 'Gegužės',
+    'June': 'Birželio',
+    'July': 'Liepos',
+    'August': 'Rugpjūčio',
+    'September': 'Rugsėjo',
+    'October': 'Spalio',
+    'November': 'Lapkričio',
+    'December': 'Gruodžio',
+    // Handle potential short forms
+    'Jan': 'Saus.',
+    'Feb': 'Vas.',
+    'Mar': 'Kov.',
+    'Apr': 'Bal.',
+    'Jun': 'Birž.',
+    'Jul': 'Liep.',
+    'Aug': 'Rugpj.',
+    'Sep': 'Rugs.',
+    'Oct': 'Spal.',
+    'Nov': 'Lapkr.',
+    'Dec': 'Gruodž.'
+  };
+
+  let result = dateString;
+  Object.keys(months).forEach(eng => {
+     // Use word boundary to avoid partial replacements (though unlikely for months)
+     const regex = new RegExp(`\\b${eng}\\b`, 'gi');
+     result = result.replace(regex, months[eng]);
+  });
+  return result;
+};

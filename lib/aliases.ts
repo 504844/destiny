@@ -23,7 +23,7 @@ export const USER_ALIASES: Record<string, string> = {
   'imantulis ^*^': 'ImantUlis',
   'imantulis ^_^ ': 'ImantUlis',
   'imantulis ^\\^ ': 'ImantUlis',
-  'imantulis ^\\_^' : 'ImantUlis',
+  'imantUlis ^\\_^' : 'ImantUlis',
 };
 
 /**

@@ -12,6 +12,7 @@ import { HomeView } from './components/views/HomeView';
 import { useMusicData } from './hooks/useMusicData';
 import { useAudioPlayer } from './hooks/useAudioPlayer';
 import { useAdmin } from './hooks/useAdmin';
+import { getAllAliases } from './lib/aliases';
 
 type ViewMode = 'HOME' | 'PROFILE';
 
@@ -48,11 +49,17 @@ const App: React.FC = () => {
     stopTrack(); // Stop playback
     setBgGradient(null);
     
-    // Fetch all tracks for this user
+    // Get all aliases (e.g., 'imantulis', 'imantulis ^_^')
+    const aliases = getAllAliases(username);
+
+    // Construct a case-insensitive OR filter for Supabase
+    // This allows 'imantulis' to match 'ImantUlis' in the DB
+    const filterQuery = aliases.map(alias => `submitted_by.ilike.${alias}`).join(',');
+
     const { data } = await supabase
         .from('tracks')
         .select('*')
-        .ilike('submitted_by', username);
+        .or(filterQuery);
 
     if (data) {
         setProfileTracks(data as Track[]);
@@ -174,6 +181,7 @@ const App: React.FC = () => {
           <UserProfile 
             username={selectedProfileUser || 'Vartotojas'} 
             tracks={profileTracks} 
+            weeks={weeks}
             onBack={handleBackToHome}
             onTrackClick={handleSearchResult}
           />

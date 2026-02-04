@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Track } from '../types';
+import { Track, Week } from '../types';
 import { ArrowLeft } from 'lucide-react';
 import { ProfileHeader } from './profile/ProfileHeader';
 import { StatsGrid } from './profile/StatsGrid';
@@ -8,25 +8,25 @@ import { HistoryList } from './profile/HistoryList';
 interface UserProfileProps {
   username: string;
   tracks: Track[]; // All tracks in DB belonging to this user
+  weeks: Week[];
   onBack: () => void;
   onTrackClick: (weekId: string, trackId: string) => void;
 }
 
-export const UserProfile: React.FC<UserProfileProps> = ({ username, tracks, onBack, onTrackClick }) => {
+export const UserProfile: React.FC<UserProfileProps> = ({ username, tracks, weeks, onBack, onTrackClick }) => {
   // Calculate Stats
   const stats = useMemo(() => {
     const total = tracks.length;
     const gold = tracks.filter(t => t.medal === 'gold').length;
     const silver = tracks.filter(t => t.medal === 'silver').length;
     const bronze = tracks.filter(t => t.medal === 'bronze').length;
-    const anyMedal = gold + silver + bronze;
     
     // Calculate average position
     const avgPos = total > 0 
       ? (tracks.reduce((acc, curr) => acc + curr.position, 0) / total).toFixed(1)
       : '0.0';
 
-    return { total, gold, silver, bronze, anyMedal, avgPos };
+    return { total, gold, silver, bronze, avgPos };
   }, [tracks]);
 
   // Sort tracks by date (newest first)
@@ -40,7 +40,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ username, tracks, onBa
         onClick={onBack}
         className="mb-6 flex items-center gap-2 text-zinc-400 hover:text-white transition-colors group"
       >
-        <div className="p-1.5 rounded-full bg-zinc-900 border border-zinc-800 group-hover:border-zinc-700">
+        <div className="p-1.5 rounded-full bg-zinc-900 border border-zinc-800 group-hover:border-zinc-700 transition-colors">
            <ArrowLeft className="w-4 h-4" />
         </div>
         <span className="text-sm font-medium">Grįžti į Topus</span>
@@ -56,6 +56,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ username, tracks, onBa
 
       <HistoryList 
         tracks={sortedTracks} 
+        weeks={weeks}
         onTrackClick={onTrackClick} 
       />
 

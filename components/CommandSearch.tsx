@@ -4,6 +4,7 @@ import { Track, Week } from '../types';
 import { SearchInput } from './search/SearchInput';
 import { RecentSearches } from './search/RecentSearches';
 import { SearchResults } from './search/SearchResults';
+import { getPrimaryUsername } from '../lib/aliases';
 
 interface CommandSearchProps {
   isOpen: boolean;
@@ -89,30 +90,41 @@ export const CommandSearch: React.FC<CommandSearchProps> = ({ isOpen, onClose, w
           .select('*')
           .or(`title.ilike.%${query}%,artists.ilike.%${query}%,submitted_by.ilike.%${query}%`)
           .order('created_at', { ascending: false })
-          .limit(30);
+          .limit(50); // Increased limit slightly to account for aggregation
 
         if (trackData) {
           const finalResults: SearchResultItem[] = [];
           const tracks = trackData as Track[];
 
-          // 2. Extract Unique Users from the results that match the query
+          // 2. Extract Unique Users (Using Alias System)
           const matchingUsers = new Map<string, number>();
           const lowerQuery = query.toLowerCase();
 
-          // Aggregate users from the track findings
           tracks.forEach(t => {
-            if (t.submitted_by && t.submitted_by.toLowerCase().includes(lowerQuery)) {
-              matchingUsers.set(t.submitted_by, (matchingUsers.get(t.submitted_by) || 0) + 1);
+            if (t.submitted_by) {
+              // Check if the actual submitted name matches query
+              // OR if the primary name matches query
+              const primaryName = getPrimaryUsername(t.submitted_by);
+              
+              const nameMatch = t.submitted_by.toLowerCase().includes(lowerQuery);
+              const primaryMatch = primaryName.toLowerCase().includes(lowerQuery);
+
+              if (nameMatch || primaryMatch) {
+                // We always aggregate count under the Primary Name
+                matchingUsers.set(primaryName, (matchingUsers.get(primaryName) || 0) + 1);
+              }
             }
           });
 
-          // Add User Results
+          // Add User Results (Aggregated)
           Array.from(matchingUsers.entries()).forEach(([username, count]) => {
             finalResults.push({ type: 'user', username, count });
           });
 
           // Add Track Results
           tracks.forEach(t => {
+            // Only show tracks where title/artist matches query if query isn't just a user search
+            // (Optional refinement, but currently we show all matches)
             finalResults.push({ type: 'track', data: t });
           });
 
@@ -188,7 +200,7 @@ export const CommandSearch: React.FC<CommandSearchProps> = ({ isOpen, onClose, w
                <span className="flex items-center gap-1"><span className="bg-zinc-800 px-1 rounded">↵</span> pasirinkti</span>
                <span className="flex items-center gap-1"><span className="bg-zinc-800 px-1 rounded">↑↓</span> naviguoti</span>
            </div>
-           <span className="font-medium text-zinc-600">Smart Search v2.0</span>
+           <span className="font-medium text-zinc-600">Smart Search v2.1</span>
         </div>
       </div>
     </div>
