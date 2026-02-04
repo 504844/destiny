@@ -19,14 +19,14 @@ export const TrackArtwork: React.FC<TrackArtworkProps> = ({
   isRetrying,
   hasPreview,
   progress,
-  onTogglePlay
+  onTogglePlay,
 }) => {
   return (
     <div
       className={cn(
         "relative flex-shrink-0 bg-zinc-900 border border-zinc-800 overflow-hidden flex items-center justify-center group/artwork isolate transition-all duration-500",
         isActive
-          ? "w-40 h-40 sm:w-32 sm:h-32 rounded-lg shadow-xl"
+          ? "w-40 h-40 sm:w-32 sm:h-32 rounded-2xl shadow-xl" // Increased rounding for premium feel when expanded
           : "w-10 h-10 sm:w-12 sm:h-12 rounded"
       )}
     >
@@ -47,8 +47,8 @@ export const TrackArtwork: React.FC<TrackArtworkProps> = ({
               onClick={onTogglePlay}
               disabled={isRetrying}
               className={cn(
-                "absolute inset-0 flex items-center justify-center transition-all duration-300 z-10",
-                isActive ? "bg-black/30 opacity-100" : "bg-black/40 opacity-0 group-hover/artwork:opacity-100",
+                "absolute inset-0 flex items-center justify-center transition-all duration-300 z-20",
+                isActive ? "bg-black/20 opacity-100" : "bg-black/40 opacity-0 group-hover/artwork:opacity-100",
                 isRetrying && "cursor-wait"
               )}
               title={isActive ? "Pause Preview" : "Play Preview"}

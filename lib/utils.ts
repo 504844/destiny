@@ -36,6 +36,19 @@ export const getRowStyle = (medal: string | null) => {
   }
 };
 
+export const getRankBadgeStyle = (medal: string | null) => {
+  switch (medal) {
+      case 'gold':
+          return 'bg-yellow-500/20 text-yellow-500 ring-1 ring-yellow-500/50 backdrop-blur-md';
+      case 'silver':
+          return 'bg-slate-400/20 text-slate-400 ring-1 ring-slate-400/50 backdrop-blur-md';
+      case 'bronze':
+          return 'bg-amber-600/20 text-amber-600 ring-1 ring-amber-600/50 backdrop-blur-md';
+      default:
+          return 'bg-zinc-950/80 border border-zinc-800 text-zinc-500 backdrop-blur-md';
+  }
+};
+
 // Helper to translate English months to Lithuanian (Genitive case for dates)
 export const formatLithuanianDate = (dateString: string | null | undefined) => {
   if (!dateString) return '';

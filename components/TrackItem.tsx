@@ -141,24 +141,21 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, isActive, onPlay, o
     }
   };
 
-  const getRankStyle = (medal: string | null) => {
-      switch (medal) {
-          case 'gold':
-              return 'bg-yellow-500/10 text-yellow-500 ring-1 ring-yellow-500/50';
-          case 'silver':
-              return 'bg-slate-400/10 text-slate-400 ring-1 ring-slate-400/50';
-          case 'bronze':
-              return 'bg-amber-600/10 text-amber-600 ring-1 ring-amber-600/50';
-          default:
-              return 'bg-zinc-950 border border-zinc-800 text-zinc-500';
-      }
-  };
-
   const expandedStyle = isActive && dominantColor ? {
     background: `linear-gradient(135deg, ${dominantColor}33 0%, #18181b 100%)`, 
     borderColor: `${dominantColor}66`, 
     boxShadow: `0 20px 40px -5px ${dominantColor}22` 
   } : undefined;
+
+  const getRankStyle = (medal: string | null) => {
+     // Collapsed Style: Box
+     switch (medal) {
+        case 'gold': return 'bg-yellow-500/10 text-yellow-500 ring-1 ring-yellow-500/30 border-transparent';
+        case 'silver': return 'bg-slate-400/10 text-slate-400 ring-1 ring-slate-400/30 border-transparent';
+        case 'bronze': return 'bg-amber-700/10 text-amber-700 ring-1 ring-amber-700/30 border-transparent';
+        default: return 'bg-zinc-950 border border-zinc-800 text-zinc-500';
+     }
+  };
 
   return (
     <div 
@@ -172,20 +169,17 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, isActive, onPlay, o
       )}
       style={expandedStyle}
     >
-      {/* Position / Medal */}
-      <div className={cn(
-        "flex-shrink-0 flex items-center justify-center transition-all duration-500 rounded-lg",
-        isActive 
-           // Expanded: Using top-3 left-3 to match collapsed px-3 padding
-           ? "absolute top-3 left-3 sm:static w-8 h-8 sm:w-10 sm:h-10 sm:scale-110 z-20 min-w-[2rem]" 
-           // Collapsed
-           : "w-8 h-8 min-w-[2rem]",
-        getRankStyle(track.medal)
-      )}>
-        <span className={cn("text-sm font-bold font-mono", isActive ? "" : "")}>
-            <span className="opacity-50 mr-0.5">#</span>{track.position}
-        </span>
-      </div>
+      {/* Position / Medal - Only visible when NOT active/expanded */}
+      {!isActive && (
+        <div className={cn(
+          "flex-shrink-0 flex items-center justify-center transition-all duration-500 rounded-lg w-8 h-8 min-w-[2rem]",
+          getRankStyle(track.medal)
+        )}>
+          <span className="text-sm font-bold font-mono">
+              <span className="opacity-50 mr-0.5">#</span>{track.position}
+          </span>
+        </div>
+      )}
 
       <TrackArtwork 
         artworkUrl={metadata.artworkUrl}
