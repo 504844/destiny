@@ -16,7 +16,8 @@
     "@supabase/supabase-js": "^2.93.3",
     "tailwind-merge": "^3.4.0",
     "fast-average-color": "9.4.0",
-    "@phosphor-icons/react": "2.0.15"
+    "@phosphor-icons/react": "2.0.15",
+    "@tanstack/react-query": "5.28.4"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

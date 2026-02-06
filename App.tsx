@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { supabase } from './lib/supabase';
 import { Track } from './types';
 import { AdminPanel } from './components/AdminPanel';
 import { LoginModal } from './components/LoginModal';
@@ -12,7 +11,7 @@ import { HomeView } from './components/views/HomeView';
 import { useMusicData } from './hooks/useMusicData';
 import { useAudioPlayer } from './hooks/useAudioPlayer';
 import { useAdmin } from './hooks/useAdmin';
-import { getAllAliases } from './lib/aliases';
+import { useProfileTracks } from './hooks/useProfileTracks';
 
 type ViewMode = 'HOME' | 'PROFILE';
 
@@ -20,7 +19,7 @@ const App: React.FC = () => {
   const [viewMode, setViewMode] = useState<ViewMode>('HOME');
   const [bgGradient, setBgGradient] = useState<string | null>(null);
   
-  // Custom Hooks
+  // Custom Hooks (Data)
   const { 
     weeks, selectedWeekId, setSelectedWeekId, 
     tracks, loadingWeeks, loadingTracks, 
@@ -40,40 +39,22 @@ const App: React.FC = () => {
   
   // Profile State
   const [selectedProfileUser, setSelectedProfileUser] = useState<string | null>(null);
-  const [profileTracks, setProfileTracks] = useState<Track[]>([]);
+  
+  // Fetch profile tracks automatically when username is selected using React Query
+  const { data: profileTracks, isLoading: loadingProfile } = useProfileTracks(selectedProfileUser);
 
   // --- Profile Logic ---
-  const handleOpenProfile = async (username: string) => {
+  const handleOpenProfile = (username: string) => {
     setSelectedProfileUser(username);
     setViewMode('PROFILE');
     stopTrack(); // Stop playback
     setBgGradient(null);
-    
-    // Get all aliases (e.g., 'imantulis', 'imantulis ^_^')
-    const aliases = getAllAliases(username);
-
-    // Construct a case-insensitive OR filter for Supabase
-    // This allows 'imantulis' to match 'ImantUlis' in the DB
-    const filterQuery = aliases.map(alias => `submitted_by.ilike.${alias}`).join(',');
-
-    const { data } = await supabase
-        .from('tracks')
-        .select('*')
-        .or(filterQuery);
-
-    if (data) {
-        setProfileTracks(data as Track[]);
-    }
   };
 
   const handleBackToHome = () => {
     setViewMode('HOME');
     setSelectedProfileUser(null);
-    setProfileTracks([]);
-    // Restore track list for current week
-    if (selectedWeekId) {
-        fetchTracks(selectedWeekId);
-    }
+    // React Query handles cache, so tracks for selectedWeekId are already there instantly
   };
 
   // --- Search & Shortcuts ---
@@ -104,14 +85,6 @@ const App: React.FC = () => {
       setHighlightedTrackId(null);
     }, 3000);
   };
-
-  // Logic for when to fetch tracks (dependent on view mode)
-  useEffect(() => {
-    // Only fetch if in HOME mode and week changed
-    if (selectedWeekId && viewMode === 'HOME') {
-      fetchTracks(selectedWeekId);
-    }
-  }, [selectedWeekId, viewMode]);
 
   const currentWeek = weeks.find(w => w.id === selectedWeekId);
 
@@ -145,7 +118,8 @@ const App: React.FC = () => {
             tracks: tracks
           } : null}
           onSuccess={(weekId) => {
-            fetchWeeks(weekId);
+            fetchWeeks(); 
+            fetchTracks(weekId);
           }} 
         />
       )}
@@ -180,7 +154,7 @@ const App: React.FC = () => {
         ) : (
           <UserProfile 
             username={selectedProfileUser || 'Vartotojas'} 
-            tracks={profileTracks} 
+            tracks={profileTracks || []} 
             weeks={weeks}
             onBack={handleBackToHome}
             onTrackClick={handleSearchResult}
