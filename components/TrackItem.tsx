@@ -38,13 +38,20 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, isActive, onPlay, o
 
   // Sync color with global background
   useEffect(() => {
-    if (onColorChange) {
-      if (isActive && dominantColor) {
-        onColorChange(dominantColor);
-      } else if (!isActive && dominantColor && audioRef.current?.paused === false) {
-         // Should not happen if isActive works, but safe cleanup
-      }
+    if (!onColorChange) return;
+
+    // Apply color when active and available
+    if (isActive && dominantColor) {
+      onColorChange(dominantColor);
     }
+
+    // Cleanup function: This ALWAYS runs before the next effect cycle.
+    // So when switching tracks, the old track clears 'null' BEFORE the new track sets 'color'.
+    return () => {
+      if (isActive && dominantColor) {
+        onColorChange(null);
+      }
+    };
   }, [isActive, dominantColor, onColorChange]);
 
   // Audio Playback & Lifecycle Management
@@ -117,7 +124,8 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, isActive, onPlay, o
         audioRef.current = null;
       }
       setProgress(0);
-      if (onColorChange) onColorChange(null);
+      // NOTE: We removed onColorChange(null) from here to avoid race conditions. 
+      // It is now handled by the cleanup function of the useEffect above.
     }
 
     return () => {

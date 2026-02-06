@@ -45,8 +45,9 @@ export const cleanString = (text: string, keepParenthesesContent: boolean = fals
 };
 
 // --- API Config ---
-const SPOTIFY_CLIENT_ID = (import.meta as any).env?.VITE_SPOTIFY_CLIENT_ID || '9427a52344624526b28494d0104951ff';
-const SPOTIFY_CLIENT_SECRET = (import.meta as any).env?.VITE_SPOTIFY_CLIENT_SECRET || 'f6b01f4984554edcb4f793feb6d52b9e';
+const env = (import.meta as any).env || {};
+const SPOTIFY_CLIENT_ID = env.VITE_SPOTIFY_CLIENT_ID || '9427a52344624526b28494d0104951ff';
+const SPOTIFY_CLIENT_SECRET = env.VITE_SPOTIFY_CLIENT_SECRET || 'f6b01f4984554edcb4f793feb6d52b9e';
 
 // --- API Fetchers ---
 
