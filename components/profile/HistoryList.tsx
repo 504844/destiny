@@ -7,9 +7,10 @@ interface HistoryListProps {
   tracks: Track[];
   weeks: Week[];
   onTrackClick: (weekId: string, trackId: string) => void;
+  isLoading?: boolean;
 }
 
-export const HistoryList: React.FC<HistoryListProps> = ({ tracks, weeks, onTrackClick }) => {
+export const HistoryList: React.FC<HistoryListProps> = ({ tracks, weeks, onTrackClick, isLoading }) => {
   
   // Group tracks by week_id
   const groupedTracks = useMemo(() => {
@@ -51,7 +52,21 @@ export const HistoryList: React.FC<HistoryListProps> = ({ tracks, weeks, onTrack
       </h3>
       
       <div className="space-y-8">
-          {groupedTracks.map(({ weekId, week, tracks }) => (
+          {isLoading ? (
+             <div className="space-y-3">
+                {Array.from({ length: 6 }).map((_, i) => (
+                    <div key={i} className="flex items-center gap-4 p-2 pr-4 rounded-xl bg-zinc-900/40 border border-zinc-800/50">
+                        <div className="w-8 h-8 rounded-lg bg-zinc-800/50 animate-pulse shrink-0" />
+                        <div className="w-12 h-12 rounded-md bg-zinc-800/50 animate-pulse shrink-0" />
+                        <div className="flex-1 space-y-2">
+                            <div className="h-4 w-1/3 bg-zinc-800/50 rounded animate-pulse" />
+                            <div className="h-3 w-1/4 bg-zinc-800/50 rounded animate-pulse" />
+                        </div>
+                    </div>
+                ))}
+             </div>
+          ) : (
+            groupedTracks.map(({ weekId, week, tracks }) => (
               <div key={weekId} className="animate-in fade-in slide-in-from-bottom-2 duration-500">
                   {/* Mini Header */}
                   <div className="flex items-center gap-3 mb-3 px-1">
@@ -106,7 +121,8 @@ export const HistoryList: React.FC<HistoryListProps> = ({ tracks, weeks, onTrack
                       ))}
                   </div>
               </div>
-          ))}
+          ))
+        )}
       </div>
     </div>
   );

@@ -155,6 +155,7 @@ const App: React.FC = () => {
           <UserProfile 
             username={selectedProfileUser || 'Vartotojas'} 
             tracks={profileTracks || []} 
+            isLoading={loadingProfile}
             weeks={weeks}
             onBack={handleBackToHome}
             onTrackClick={handleSearchResult}
