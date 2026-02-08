@@ -1,41 +1,24 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="lt" class="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>DJ Destiny - Savaitės top</title>
-    <link
-      rel="apple-touch-icon"
-      sizes="180x180"
-      href="/public/apple-touch-icon.png"
-    />
-    <link
-      rel="icon"
-      type="image/png"
-      sizes="32x32"
-      href="/public/favicon-32x32.png"
-    />
-    <link
-      rel="icon"
-      type="image/png"
-      sizes="16x16"
-      href="/public/favicon-16x16.png"
-    />
-    <link rel="manifest" href="/site.webmanifest" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/public/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/public/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/public/favicon-16x16.png">
+    <link rel="manifest" href="/site.webmanifest">
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script>
       tailwind.config = {
-        darkMode: "class",
+        darkMode: 'class',
         theme: {
           extend: {
             fontFamily: {
-              sans: ["Inter", "sans-serif"],
+              sans: ['Inter', 'sans-serif'],
             },
             colors: {
               border: "hsl(var(--border))",
@@ -88,35 +71,35 @@
             },
           },
         },
-      };
+      }
     </script>
     <style>
       :root {
         /* Zinc-950 base for strict dark mode */
         --background: 240 10% 3.9%;
         --foreground: 0 0% 98%;
-
+        
         --card: 240 10% 3.9%;
         --card-foreground: 0 0% 98%;
-
+        
         --popover: 240 10% 3.9%;
         --popover-foreground: 0 0% 98%;
-
+        
         --primary: 0 0% 98%;
         --primary-foreground: 240 5.9% 10%;
-
+        
         --secondary: 240 3.7% 15.9%;
         --secondary-foreground: 0 0% 98%;
-
+        
         --muted: 240 3.7% 15.9%;
         --muted-foreground: 240 5% 64.9%;
-
+        
         --accent: 240 3.7% 15.9%;
         --accent-foreground: 0 0% 98%;
-
+        
         --destructive: 0 62.8% 30.6%;
         --destructive-foreground: 0 0% 98%;
-
+        
         --border: 240 3.7% 15.9%;
         --input: 240 3.7% 15.9%;
         --ring: 240 4.9% 83.9%;
@@ -141,29 +124,31 @@
         background: hsl(var(--primary));
       }
     </style>
-    <script type="importmap">
-      {
-        "imports": {
-          "react": "https://esm.sh/react@19.2.4",
-          "react/jsx-runtime": "https://esm.sh/react@19.2.4/jsx-runtime",
-          "react-dom": "https://esm.sh/react-dom@19.2.4",
-          "react-dom/client": "https://esm.sh/react-dom@19.2.4/client",
-          "lucide-react": "https://esm.sh/lucide-react@0.344.0?external=react",
-          "clsx": "https://esm.sh/clsx@2.1.1",
-          "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2.39.3",
-          "tailwind-merge": "https://esm.sh/tailwind-merge@2.2.0",
-          "fast-average-color": "https://esm.sh/fast-average-color@9.4.0",
-          "@phosphor-icons/react": "https://esm.sh/@phosphor-icons/react@2.0.15?external=react",
-          "@tanstack/react-query": "https://esm.sh/@tanstack/react-query@5.28.4?external=react,react-dom",
-          "recharts": "https://esm.sh/recharts@2.12.3?external=react,react-dom",
-          "@google/genai": "https://esm.sh/@google/genai@0.1.0"
-        }
-      }
-    </script>
-    <link rel="stylesheet" href="/index.css" />
-  </head>
+  <script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@19.2.4",
+    "react/jsx-runtime": "https://esm.sh/react@19.2.4/jsx-runtime",
+    "react-dom": "https://esm.sh/react-dom@19.2.4",
+    "react-dom/client": "https://esm.sh/react-dom@19.2.4/client",
+    "lucide-react": "https://esm.sh/lucide-react@0.344.0?external=react",
+    "clsx": "https://esm.sh/clsx@2.1.1",
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2.39.3",
+    "tailwind-merge": "https://esm.sh/tailwind-merge@2.2.0",
+    "fast-average-color": "https://esm.sh/fast-average-color@9.4.0",
+    "@phosphor-icons/react": "https://esm.sh/@phosphor-icons/react@2.0.15?external=react",
+    "@tanstack/react-query": "https://esm.sh/@tanstack/react-query@5.28.4?external=react,react-dom",
+    "recharts": "https://esm.sh/recharts@2.12.3?external=react,react-dom",
+    "@google/genai": "https://esm.sh/@google/genai@0.1.0",
+    "react/": "https://esm.sh/react@^19.2.4/",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.4/"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/index.tsx"></script>
-  </body>
+  <script type="module" src="/index.tsx"></script>
+</body>
 </html>
