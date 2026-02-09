@@ -24,9 +24,9 @@ export const TrackArtwork: React.FC<TrackArtworkProps> = ({
   return (
     <div
       className={cn(
-        "relative flex-shrink-0 bg-zinc-900 border border-zinc-800 overflow-hidden flex items-center justify-center group/artwork isolate transition-all duration-500",
+        "relative flex-shrink-0 bg-zinc-900 border border-zinc-800 overflow-hidden flex items-center justify-center group/artwork isolate transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]",
         isActive
-          ? "w-40 h-40 sm:w-32 sm:h-32 rounded-2xl shadow-xl" // Increased rounding for premium feel when expanded
+          ? "w-24 h-24 sm:w-32 sm:h-32 rounded-xl sm:rounded-2xl shadow-xl ring-1 ring-white/10" // Slightly smaller on mobile (w-24) to fit row better
           : "w-10 h-10 sm:w-12 sm:h-12 rounded"
       )}
     >

@@ -13,7 +13,9 @@ export const TrackActions: React.FC<TrackActionsProps> = ({ track, isActive }) =
   return (
     <div className={cn(
       "flex items-center transition-all duration-500",
-      isActive ? "flex-wrap gap-4 sm:gap-2 opacity-100 justify-center w-full sm:w-auto pt-4 sm:pt-0" : "gap-1 opacity-0 group-hover:opacity-100 ml-auto"
+      isActive 
+        ? "w-full sm:w-auto justify-center sm:justify-end gap-3 sm:gap-2 opacity-100 pt-2 sm:pt-0 border-t border-white/5 sm:border-0 mt-2 sm:mt-0" 
+        : "gap-1 opacity-0 group-hover:opacity-100 ml-auto"
     )}>
 
       <a
@@ -22,7 +24,7 @@ export const TrackActions: React.FC<TrackActionsProps> = ({ track, isActive }) =
         rel="noopener noreferrer"
         className={cn(
           "rounded-full transition-colors flex items-center justify-center",
-          isActive ? "p-3 bg-zinc-800 text-zinc-400 hover:bg-[#1DB954] hover:text-white sm:scale-100" : "p-1.5 sm:p-2 hover:bg-[#1DB954]/10 hover:text-[#1DB954] text-zinc-600"
+          isActive ? "p-3 bg-zinc-800 text-zinc-400 hover:bg-[#1DB954] hover:text-white sm:scale-100 ring-1 ring-white/5" : "p-1.5 sm:p-2 hover:bg-[#1DB954]/10 hover:text-[#1DB954] text-zinc-600"
         )}
         title="Search on Spotify"
       >
@@ -35,7 +37,7 @@ export const TrackActions: React.FC<TrackActionsProps> = ({ track, isActive }) =
         rel="noopener noreferrer"
         className={cn(
           "rounded-full transition-colors flex items-center justify-center",
-          isActive ? "p-3 bg-zinc-800 text-zinc-400 hover:bg-[#FA243C] hover:text-white sm:scale-100" : "p-1.5 sm:p-2 hover:bg-[#FA243C]/10 hover:text-[#FA243C] text-zinc-600"
+          isActive ? "p-3 bg-zinc-800 text-zinc-400 hover:bg-[#FA243C] hover:text-white sm:scale-100 ring-1 ring-white/5" : "p-1.5 sm:p-2 hover:bg-[#FA243C]/10 hover:text-[#FA243C] text-zinc-600"
         )}
         title="Search on Apple Music"
       >
@@ -48,7 +50,7 @@ export const TrackActions: React.FC<TrackActionsProps> = ({ track, isActive }) =
         rel="noopener noreferrer"
         className={cn(
           "rounded-full transition-colors flex items-center justify-center",
-          isActive ? "p-3 bg-zinc-800 text-zinc-400 hover:bg-[#FF5500] hover:text-white sm:scale-100" : "p-1.5 sm:p-2 hover:bg-[#FF5500]/10 hover:text-[#FF5500] text-zinc-600"
+          isActive ? "p-3 bg-zinc-800 text-zinc-400 hover:bg-[#FF5500] hover:text-white sm:scale-100 ring-1 ring-white/5" : "p-1.5 sm:p-2 hover:bg-[#FF5500]/10 hover:text-[#FF5500] text-zinc-600"
         )}
         title="Search on SoundCloud"
       >
@@ -61,7 +63,7 @@ export const TrackActions: React.FC<TrackActionsProps> = ({ track, isActive }) =
         rel="noopener noreferrer"
         className={cn(
           "rounded-full transition-colors flex items-center justify-center",
-          isActive ? "p-3 bg-zinc-800 text-zinc-400 hover:bg-red-600 hover:text-white sm:scale-100" : "p-1.5 sm:p-2 hover:bg-red-500/10 hover:text-red-500 text-zinc-600"
+          isActive ? "p-3 bg-zinc-800 text-zinc-400 hover:bg-red-600 hover:text-white sm:scale-100 ring-1 ring-white/5" : "p-1.5 sm:p-2 hover:bg-red-500/10 hover:text-red-500 text-zinc-600"
         )}
         title="Search on YouTube"
       >

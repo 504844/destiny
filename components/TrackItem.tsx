@@ -53,7 +53,6 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, isActive, onPlay, o
 
     const playAudio = async () => {
       // Force creation of new audio if it doesn't exist or URL changed
-      // We purposefully destroy audio on stop, so this often runs on fresh play
       if (!audioRef.current || audioRef.current.src !== metadata.previewUrl) {
           if (!metadata.previewUrl) return; 
           
@@ -72,15 +71,10 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, isActive, onPlay, o
              }
           };
           
-          // Healing Logic (Delegated to Hook)
           newAudio.onerror = async (e) => {
-            // Only attempt to heal if we are still active and not cancelled
             if (isCancelled) return;
-
             console.warn("Audio playback failed. Attempting heal...", e);
-            
             const newUrl = await healMetadata();
-            
             if (!newUrl) {
                 onStop();
             }
@@ -93,15 +87,12 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, isActive, onPlay, o
       
       try {
         if (isCancelled) return;
-        
         const playPromise = currentAudio.play();
         if (playPromise !== undefined) {
             await playPromise;
         }
       } catch (err: any) {
-        // Ignore AbortError which happens when pause() is called while loading (user clicked stop quickly)
         if (err.name === 'AbortError') return;
-        
         console.error("Play failed:", err);
       }
     };
@@ -109,8 +100,6 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, isActive, onPlay, o
     if (isActive) {
       playAudio();
     } else {
-      // Stop playback if we are no longer active
-      // We completely destroy the instance to ensure a fresh start next time
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current.src = ""; // Help GC
@@ -123,12 +112,10 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, isActive, onPlay, o
     return () => {
       isCancelled = true;
       if (audioRef.current) {
-        // Just pause, don't nullify ref here to avoid complex state issues during unmount
-        // The isActive check above handles the nullification logic for normal toggles
         audioRef.current.pause();
       }
     };
-  }, [isActive, metadata.previewUrl]); // Re-run if active state changes or if URL changes (healing)
+  }, [isActive, metadata.previewUrl]);
 
   const togglePlay = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -148,7 +135,6 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, isActive, onPlay, o
   } : undefined;
 
   const getRankStyle = (medal: string | null) => {
-     // Collapsed Style: Box
      switch (medal) {
         case 'gold': return 'bg-yellow-500/10 text-yellow-500 ring-1 ring-yellow-500/30 border-transparent';
         case 'silver': return 'bg-slate-400/10 text-slate-400 ring-1 ring-slate-400/30 border-transparent';
@@ -163,23 +149,22 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, isActive, onPlay, o
       className={cn(
         "group relative flex items-center rounded-xl overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]",
         isActive 
-          ? "flex-col sm:flex-row py-6 px-4 gap-4 sm:gap-6 my-6 bg-zinc-900 border border-zinc-700 shadow-2xl scale-100 sm:scale-[1.03] z-10 w-full max-w-full" 
+          ? "flex-wrap sm:flex-nowrap py-4 px-3 sm:py-6 sm:px-4 gap-4 sm:gap-6 my-6 bg-zinc-900 border border-zinc-700 shadow-2xl scale-100 sm:scale-[1.03] z-10 w-full" 
           : "gap-3 sm:gap-4 px-3 py-2 sm:px-4 sm:py-3 border border-zinc-800/60 bg-zinc-900/40 hover:bg-zinc-900/60",
         isHighlighted && !isActive && "ring-2 ring-white/50 bg-zinc-800/60 scale-[1.02] shadow-lg shadow-white/10"
       )}
       style={expandedStyle}
     >
-      {/* Position / Medal - Only visible when NOT active/expanded */}
-      {!isActive && (
-        <div className={cn(
-          "flex-shrink-0 flex items-center justify-center transition-all duration-500 rounded-lg w-8 h-8 min-w-[2rem]",
-          getRankStyle(track.medal)
-        )}>
-          <span className="text-sm font-bold font-mono">
-              <span className="opacity-50 mr-0.5">#</span>{track.position}
-          </span>
-        </div>
-      )}
+      {/* Position / Medal - Always Visible to prevent jumping */}
+      <div className={cn(
+        "flex-shrink-0 flex items-center justify-center transition-all duration-500 rounded-lg w-8 h-8 min-w-[2rem]",
+        getRankStyle(track.medal),
+        isActive && "bg-transparent ring-0 border-0 shadow-none text-white/40 scale-110" // Subtle fade when active
+      )}>
+        <span className={cn("text-sm font-bold font-mono transition-colors", isActive && "text-white/60")}>
+            <span className={cn("opacity-50 mr-0.5", isActive && "opacity-30")}>#</span>{track.position}
+        </span>
+      </div>
 
       <TrackArtwork 
         artworkUrl={metadata.artworkUrl}
@@ -197,6 +182,9 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, isActive, onPlay, o
         submittedBy={track.submitted_by} 
         isActive={isActive} 
       />
+
+      {/* Force a break on mobile active state to put actions on new line */}
+      <div className={cn("hidden sm:hidden w-full h-0", isActive && "block basis-full")} />
 
       <TrackActions 
         track={track} 
