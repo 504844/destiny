@@ -88,7 +88,7 @@ const App: React.FC = () => {
   // --- Search & Shortcuts ---
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
         e.preventDefault();
         setIsSearchOpen(true);
       }

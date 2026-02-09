@@ -180,7 +180,8 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, isActive, onPlay, o
         title={track.title} 
         artists={track.artists} 
         submittedBy={track.submitted_by} 
-        isActive={isActive} 
+        isActive={isActive}
+        genre={metadata.genre}
       />
 
       {/* Force a break on mobile active state to put actions on new line */}

@@ -3,6 +3,7 @@ import { Track } from '../types';
 export interface TrackMetadataResult {
   artworkUrl?: string;
   previewUrl?: string;
+  genre?: string;
   found: boolean;
 }
 
@@ -150,9 +151,11 @@ const fetchItunesMetadata = async (query: string) => {
       const data = await response.json();
       if (data.results && data.results.length > 0) {
         const result = data.results[0];
+        console.log(`[iTunes] Found: ${result.artistName} - ${result.trackName} | Genre: ${result.primaryGenreName}`);
         return {
           artworkUrl: result.artworkUrl100 || result.artworkUrl60,
-          previewUrl: result.previewUrl
+          previewUrl: result.previewUrl,
+          genre: result.primaryGenreName // Extract Genre
         };
       }
     }
@@ -179,9 +182,9 @@ export const searchExternalMetadata = async (track: Track): Promise<TrackMetadat
   const firstArtistToken = cleanPrimaryArtist.split(' ')[0] || '';
   const queryFallback = `${titleNoMix} ${firstArtistToken}`;
 
-  let foundData: { artworkUrl?: string; previewUrl?: string } | null = null;
+  let foundData: { artworkUrl?: string; previewUrl?: string; genre?: string } | null = null;
 
-  // --- 1. iTunes (Best for previews) ---
+  // --- 1. iTunes (Best for previews & GENRES) ---
   foundData = await fetchItunesMetadata(querySpecific);
   
   if (!foundData && queryBroad !== querySpecific) {
@@ -218,11 +221,15 @@ export const searchExternalMetadata = async (track: Track): Promise<TrackMetadat
   }
 
   if (foundData) {
+      console.log(`[Metadata] Search success for "${track.title}":`, foundData);
       return {
           artworkUrl: foundData.artworkUrl,
           previewUrl: foundData.previewUrl,
+          genre: foundData.genre,
           found: true
       };
+  } else {
+      console.log(`[Metadata] No results found for "${track.title}"`);
   }
 
   return null;

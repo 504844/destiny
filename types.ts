@@ -17,6 +17,7 @@ export interface Track {
   medal: 'gold' | 'silver' | 'bronze' | null;
   artwork_url?: string | null;
   preview_url?: string | null;
+  genre?: string | null;
   created_at: string;
 }
 
