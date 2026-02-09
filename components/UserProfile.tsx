@@ -11,9 +11,10 @@ interface UserProfileProps {
   weeks: Week[];
   onBack: () => void;
   onTrackClick: (weekId: string, trackId: string) => void;
+  isLoading: boolean;
 }
 
-export const UserProfile: React.FC<UserProfileProps> = ({ username, tracks, weeks, onBack, onTrackClick }) => {
+export const UserProfile: React.FC<UserProfileProps> = ({ username, tracks, weeks, onBack, onTrackClick, isLoading }) => {
   // Calculate Stats
   const stats = useMemo(() => {
     const total = tracks.length;
@@ -49,20 +50,24 @@ export const UserProfile: React.FC<UserProfileProps> = ({ username, tracks, week
       <ProfileHeader 
         username={username} 
         totalTracks={stats.total} 
-        avgPos={stats.avgPos} 
+        avgPos={stats.avgPos}
+        isLoading={isLoading} 
       />
 
-      <StatsGrid stats={stats} />
+      <StatsGrid stats={stats} isLoading={isLoading} />
 
       <HistoryList 
         tracks={sortedTracks} 
         weeks={weeks}
-        onTrackClick={onTrackClick} 
+        onTrackClick={onTrackClick}
+        isLoading={isLoading} 
       />
 
-      <div className="mt-12 mb-8 text-center">
-        <p className="text-xs text-zinc-700">Rodomos visos {stats.total} dainos</p>
-      </div>
+      {!isLoading && (
+        <div className="mt-12 mb-8 text-center">
+          <p className="text-xs text-zinc-700">Rodomos visos {stats.total} dainos</p>
+        </div>
+      )}
 
     </div>
   );

@@ -47,8 +47,18 @@ export const TrackList: React.FC<TrackListProps> = ({
 
       <div className="space-y-2">
         {loadingTracks ? (
-          Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="h-16 w-full bg-zinc-900/30 rounded-md animate-pulse border border-zinc-800/50" />
+          Array.from({ length: 6 }).map((_, i) => (
+             <div key={i} className="flex items-center gap-3 sm:gap-4 px-3 py-2 sm:px-4 sm:py-3 rounded-xl bg-zinc-900/20 border border-zinc-800/50">
+                 {/* Position Skeleton */}
+                 <div className="w-8 h-8 rounded-lg bg-zinc-800/50 animate-pulse shrink-0" />
+                 {/* Artwork Skeleton */}
+                 <div className="w-10 h-10 sm:w-12 sm:h-12 rounded bg-zinc-800/50 animate-pulse shrink-0" />
+                 {/* Text Skeleton */}
+                 <div className="flex-1 space-y-2 py-1">
+                    <div className="h-4 w-32 sm:w-48 bg-zinc-800/50 rounded animate-pulse" />
+                    <div className="h-3 w-20 sm:w-24 bg-zinc-800/50 rounded animate-pulse" />
+                 </div>
+             </div>
           ))
         ) : tracks.length > 0 ? (
           <div className="grid gap-2">

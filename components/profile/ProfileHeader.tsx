@@ -6,9 +6,10 @@ interface ProfileHeaderProps {
   username: string;
   totalTracks: number;
   avgPos: string;
+  isLoading: boolean;
 }
 
-export const ProfileHeader: React.FC<ProfileHeaderProps> = ({ username, totalTracks, avgPos }) => {
+export const ProfileHeader: React.FC<ProfileHeaderProps> = ({ username, totalTracks, avgPos, isLoading }) => {
   // Generate a consistent color based on username
   const getColor = (name: string) => {
     let hash = 0;
@@ -20,6 +21,27 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({ username, totalTra
   };
 
   const userColor = getColor(username);
+
+  if (isLoading) {
+    return (
+      <div className="relative w-full rounded-[2rem] overflow-hidden border border-zinc-800 bg-zinc-900/50 shadow-2xl mb-8 select-none">
+        <div className="p-8 sm:p-10 flex flex-col sm:flex-row items-center sm:items-end gap-8">
+          {/* Avatar Skeleton */}
+          <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-3xl bg-zinc-800 animate-pulse shrink-0 border border-zinc-700/50" />
+          
+          {/* Text Content Skeleton */}
+          <div className="flex-1 w-full flex flex-col items-center sm:items-start space-y-4">
+             <div className="h-10 sm:h-12 w-48 sm:w-64 bg-zinc-800 rounded-lg animate-pulse" />
+             <div className="h-4 w-32 bg-zinc-800 rounded animate-pulse" />
+             <div className="flex gap-3 pt-2">
+                <div className="h-9 w-24 bg-zinc-800 rounded-full animate-pulse" />
+                <div className="h-9 w-24 bg-zinc-800 rounded-full animate-pulse" />
+             </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative w-full rounded-[2rem] overflow-hidden border border-zinc-800 bg-zinc-900/50 shadow-2xl mb-8 group select-none">

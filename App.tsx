@@ -41,28 +41,37 @@ const App: React.FC = () => {
   // Profile State
   const [selectedProfileUser, setSelectedProfileUser] = useState<string | null>(null);
   const [profileTracks, setProfileTracks] = useState<Track[]>([]);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(false);
 
   // --- Profile Logic ---
   const handleOpenProfile = async (username: string) => {
+    setIsLoadingProfile(true);
     setSelectedProfileUser(username);
     setViewMode('PROFILE');
     stopTrack(); // Stop playback
     setBgGradient(null);
+    setProfileTracks([]); // Clear previous tracks
     
-    // Get all aliases (e.g., 'imantulis', 'imantulis ^_^')
-    const aliases = getAllAliases(username);
+    try {
+      // Get all aliases (e.g., 'imantulis', 'imantulis ^_^')
+      const aliases = getAllAliases(username);
 
-    // Construct a case-insensitive OR filter for Supabase
-    // This allows 'imantulis' to match 'ImantUlis' in the DB
-    const filterQuery = aliases.map(alias => `submitted_by.ilike.${alias}`).join(',');
+      // Construct a case-insensitive OR filter for Supabase
+      // This allows 'imantulis' to match 'ImantUlis' in the DB
+      const filterQuery = aliases.map(alias => `submitted_by.ilike.${alias}`).join(',');
 
-    const { data } = await supabase
-        .from('tracks')
-        .select('*')
-        .or(filterQuery);
+      const { data } = await supabase
+          .from('tracks')
+          .select('*')
+          .or(filterQuery);
 
-    if (data) {
-        setProfileTracks(data as Track[]);
+      if (data) {
+          setProfileTracks(data as Track[]);
+      }
+    } catch (error) {
+      console.error("Error fetching profile:", error);
+    } finally {
+      setIsLoadingProfile(false);
     }
   };
 
@@ -184,6 +193,7 @@ const App: React.FC = () => {
             weeks={weeks}
             onBack={handleBackToHome}
             onTrackClick={handleSearchResult}
+            isLoading={isLoadingProfile}
           />
         )}
 
