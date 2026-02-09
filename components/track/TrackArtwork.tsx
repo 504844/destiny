@@ -26,7 +26,7 @@ export const TrackArtwork: React.FC<TrackArtworkProps> = ({
       className={cn(
         "relative flex-shrink-0 bg-zinc-900 border border-zinc-800 overflow-hidden flex items-center justify-center group/artwork isolate transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]",
         isActive
-          ? "w-24 h-24 sm:w-32 sm:h-32 rounded-xl sm:rounded-2xl shadow-xl ring-1 ring-white/10" // Slightly smaller on mobile (w-24) to fit row better
+          ? "w-48 h-48 sm:w-32 sm:h-32 rounded-2xl shadow-2xl ring-1 ring-white/10" // BIGGER on mobile (w-48 = 192px)
           : "w-10 h-10 sm:w-12 sm:h-12 rounded"
       )}
     >
@@ -71,9 +71,9 @@ export const TrackArtwork: React.FC<TrackArtworkProps> = ({
               )}
 
               {isRetrying ? (
-                <Loader2 className="w-8 h-8 text-white animate-spin" />
+                <Loader2 className={cn("text-white animate-spin", isActive ? "w-12 h-12" : "w-8 h-8")} />
               ) : isActive ? (
-                <Pause className="w-8 h-8 text-white fill-current relative z-20 drop-shadow-lg" />
+                <Pause className={cn("text-white fill-current relative z-20 drop-shadow-lg", isActive ? "w-12 h-12" : "w-8 h-8")} />
               ) : (
                 <Play className="w-5 h-5 text-white fill-current relative z-20 pl-0.5" />
               )}
@@ -81,7 +81,7 @@ export const TrackArtwork: React.FC<TrackArtworkProps> = ({
           )}
         </>
       ) : (
-        <Music2 className={cn("text-zinc-700", isActive ? "w-10 h-10" : "w-5 h-5")} />
+        <Music2 className={cn("text-zinc-700", isActive ? "w-16 h-16" : "w-5 h-5")} />
       )}
     </div>
   );

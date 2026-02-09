@@ -147,19 +147,19 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, isActive, onPlay, o
     <div 
       ref={itemRef}
       className={cn(
-        "group relative flex items-center rounded-xl overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]",
+        "group relative flex rounded-xl overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]",
         isActive 
-          ? "flex-wrap sm:flex-nowrap py-4 px-3 sm:py-6 sm:px-4 gap-4 sm:gap-6 my-6 bg-zinc-900 border border-zinc-700 shadow-2xl scale-100 sm:scale-[1.03] z-10 w-full" 
-          : "gap-3 sm:gap-4 px-3 py-2 sm:px-4 sm:py-3 border border-zinc-800/60 bg-zinc-900/40 hover:bg-zinc-900/60",
+          ? "flex-col sm:flex-row items-center py-6 px-4 sm:py-6 sm:px-4 gap-4 sm:gap-6 my-6 bg-zinc-900 border border-zinc-700 shadow-2xl scale-100 sm:scale-[1.03] z-10 w-full" 
+          : "flex-row items-center gap-3 sm:gap-4 px-3 py-2 sm:px-4 sm:py-3 border border-zinc-800/60 bg-zinc-900/40 hover:bg-zinc-900/60",
         isHighlighted && !isActive && "ring-2 ring-white/50 bg-zinc-800/60 scale-[1.02] shadow-lg shadow-white/10"
       )}
       style={expandedStyle}
     >
-      {/* Position / Medal - Always Visible to prevent jumping */}
+      {/* Position / Medal - Hide on mobile when active, show on desktop */}
       <div className={cn(
         "flex-shrink-0 flex items-center justify-center transition-all duration-500 rounded-lg w-8 h-8 min-w-[2rem]",
         getRankStyle(track.medal),
-        isActive && "bg-transparent ring-0 border-0 shadow-none text-white/40 scale-110" // Subtle fade when active
+        isActive && "hidden sm:flex bg-transparent ring-0 border-0 shadow-none text-white/40 scale-110"
       )}>
         <span className={cn("text-sm font-bold font-mono transition-colors", isActive && "text-white/60")}>
             <span className={cn("opacity-50 mr-0.5", isActive && "opacity-30")}>#</span>{track.position}
@@ -183,9 +183,6 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, isActive, onPlay, o
         isActive={isActive}
         genre={metadata.genre}
       />
-
-      {/* Force a break on mobile active state to put actions on new line */}
-      <div className={cn("hidden sm:hidden w-full h-0", isActive && "block basis-full")} />
 
       <TrackActions 
         track={track} 

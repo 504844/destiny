@@ -13,54 +13,77 @@ interface TrackInfoProps {
 export const TrackInfo: React.FC<TrackInfoProps> = ({ title, artists, submittedBy, isActive, genre }) => {
   return (
     <div className={cn(
-      "flex-grow min-w-0 flex flex-col justify-center gap-0.5 transition-all duration-500 text-left",
+      "flex-grow min-w-0 flex flex-col justify-center transition-all duration-500",
+      isActive ? "gap-2 text-center sm:text-left" : "gap-1 text-left"
     )}>
+      {/* Song Title - Always visible, can wrap on active */}
       <h3 className={cn(
-        "font-medium pr-2 transition-all duration-500 leading-tight",
-        isActive ? "text-lg sm:text-2xl text-white mb-1 whitespace-normal break-words" : "text-sm sm:text-base text-zinc-200 group-hover:text-white truncate"
+        "font-semibold transition-all duration-500 leading-tight",
+        isActive 
+          ? "text-lg sm:text-xl md:text-2xl text-white line-clamp-2" 
+          : "text-sm sm:text-base text-zinc-200 group-hover:text-white line-clamp-1"
       )}>
         {title}
       </h3>
-      <div className={cn(
-        "flex flex-col sm:flex-row sm:items-start sm:items-center transition-all duration-500",
-        isActive ? "gap-1 sm:gap-2" : "gap-2"
-      )}>
-        <span className={cn(
-          "transition-all duration-500 font-medium",
-           // Changed to whitespace-normal when active to prevent cutoff
-           isActive ? "text-base sm:text-lg text-zinc-400 whitespace-normal break-words" : "text-xs text-zinc-500 truncate"
-        )}>
-          {artists}
-        </span>
 
-        <div className="flex flex-wrap items-center gap-2 mt-0.5 sm:mt-0">
-            {/* Submitter - Priority 1 (Moved before Genre) */}
+      {/* Active State: Stack metadata vertically for breathing room */}
+      {isActive ? (
+        <div className="flex flex-col gap-1.5 items-center sm:items-start">
+          {/* Artist - Full visibility */}
+          <div className="text-sm sm:text-base text-zinc-300 font-medium line-clamp-1">
+            {artists}
+          </div>
+          
+          {/* Secondary metadata row */}
+          <div className="flex items-center justify-center sm:justify-start gap-2 text-xs sm:text-sm">
             {submittedBy && (
-               <span className={cn(
-                 "flex items-center gap-1.5 transition-all duration-700 ease-out",
-                 isActive
-                   ? "opacity-100 text-sm text-zinc-500/80"
-                   : "hidden sm:inline-flex opacity-50 text-xs text-zinc-500"
-               )}>
-                <span className="hidden sm:inline">•</span>
-                <User className={isActive ? "w-3.5 h-3.5" : "w-3 h-3"} />
-                <span>@{submittedBy}</span>
+              <div className="flex items-center gap-1.5 text-zinc-500">
+                <User className="w-3 h-3 sm:w-3.5 sm:h-3.5 opacity-60 shrink-0" />
+                <span className="font-medium">@{submittedBy}</span>
+              </div>
+            )}
+            
+            {genre && submittedBy && (
+              <span className="text-zinc-700">•</span>
+            )}
+            
+            {genre && (
+              <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-zinc-600">
+                {genre}
               </span>
             )}
-
-            {/* Genre Badge - Priority 2 (Least important, subtle styling) */}
-            {genre && (
-                <span className={cn(
-                  "inline-flex items-center px-1.5 py-px rounded border text-[9px] font-medium uppercase tracking-wider transition-all duration-500 select-none",
-                  isActive 
-                    ? "bg-white/5 border-white/10 text-white/30" 
-                    : "bg-zinc-800/30 border-zinc-800/50 text-zinc-600"
-                )}>
-                  {genre}
-                </span>
-            )}
+          </div>
         </div>
-      </div>
+      ) : (
+        /* Inactive State: Compact horizontal layout with smart priorities */
+        <div className="flex items-center gap-2 min-w-0">
+          {/* Artist - Gets most space, can truncate */}
+          <span className="text-xs sm:text-sm text-zinc-400 font-medium truncate">
+            {artists}
+          </span>
+
+          {/* User - Only show if there's room (hidden on very small screens) */}
+          {submittedBy && (
+            <>
+              <span className="text-zinc-700 text-[10px] shrink-0 hidden xs:inline">•</span>
+              <div className="hidden xs:flex items-center gap-1 text-zinc-500/70 shrink-0">
+                <User className="w-2.5 h-2.5 opacity-60" />
+                <span className="text-[10px] sm:text-xs font-medium">@{submittedBy}</span>
+              </div>
+            </>
+          )}
+
+          {/* Genre - Lowest priority, hide on mobile */}
+          {genre && (
+            <>
+              <span className="text-zinc-700 text-[10px] shrink-0 hidden sm:inline">•</span>
+              <span className="hidden sm:inline text-[8px] sm:text-[9px] font-bold uppercase tracking-wider text-zinc-700 shrink-0">
+                {genre}
+              </span>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 };

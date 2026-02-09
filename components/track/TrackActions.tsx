@@ -14,8 +14,7 @@ export const TrackActions: React.FC<TrackActionsProps> = ({ track, isActive }) =
     <div className={cn(
       "flex items-center transition-all duration-500",
       isActive 
-        ? "w-full sm:w-auto justify-center sm:justify-end gap-3 sm:gap-2 opacity-100 pt-2 sm:pt-0 border-t border-white/5 sm:border-0 mt-2 sm:mt-0" 
-        // Changed: opacity-100 by default (mobile), sm:opacity-0 (desktop hidden initially), sm:group-hover:opacity-100 (desktop hover)
+        ? "w-full sm:w-auto justify-center sm:justify-end gap-3 sm:gap-2 opacity-100 pt-3 sm:pt-0 border-t border-white/5 sm:border-0 mt-2 sm:mt-0" 
         : "gap-1 ml-auto opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
     )}>
 
