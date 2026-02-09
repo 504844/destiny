@@ -1,92 +1,82 @@
 import { useState, useEffect } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
 import { Week, Track } from '../types';
 
 export const useMusicData = () => {
-  const queryClient = useQueryClient();
-  
-  // Persist selection in localStorage but initialize from it
-  const [selectedWeekId, setSelectedWeekId] = useState<string | null>(
-    localStorage.getItem('dj_destiny_selected_week')
-  );
+  const [weeks, setWeeks] = useState<Week[]>([]);
+  const [selectedWeekId, setSelectedWeekId] = useState<string | null>(null);
+  const [tracks, setTracks] = useState<Track[]>([]);
+  const [loadingWeeks, setLoadingWeeks] = useState(true);
+  const [loadingTracks, setLoadingTracks] = useState(false);
 
-  // 1. Fetch Weeks (Cached)
-  const weeksQuery = useQuery({
-    queryKey: ['weeks'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('weeks')
-        .select('*')
-        .order('week_number', { ascending: false });
+  const fetchTracks = async (weekId: string) => {
+    setLoadingTracks(true);
+    // Resetting tracks before fetch gives better visual feedback that data is changing
+    // but keeping old tracks might be smoother. Let's clear to avoid stale data.
+    
+    const { data, error } = await supabase
+      .from('tracks')
+      .select('*')
+      .eq('week_id', weekId)
+      .order('position', { ascending: true });
 
-      if (error) throw error;
-      return data as Week[];
+    if (error) {
+      console.error('Error fetching tracks:', error);
+    } else if (data) {
+      setTracks(data as Track[]);
     }
-  });
+    setLoadingTracks(false);
+  };
 
-  // 2. Fetch Tracks for Selected Week (Cached)
-  const tracksQuery = useQuery({
-    queryKey: ['tracks', selectedWeekId],
-    queryFn: async () => {
-      if (!selectedWeekId) return [];
+  const fetchWeeks = async (keepSelection?: string) => {
+    setLoadingWeeks(true);
+    const { data, error } = await supabase
+      .from('weeks')
+      .select('*')
+      .order('week_number', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching weeks:', error);
+    } else if (data) {
+      setWeeks(data);
       
-      const { data, error } = await supabase
-        .from('tracks')
-        .select('id, week_id, title, artists, submitted_by, position, medal, artwork_url, preview_url') // Select only what we need
-        .eq('week_id', selectedWeekId)
-        .order('position', { ascending: true });
-
-      if (error) throw error;
-      return data as Track[];
-    },
-    enabled: !!selectedWeekId, // Only fetch if we have a week selected
-    staleTime: 1000 * 60 * 5, // Tracks don't change often, keep fresh
-  });
-
-  // Auto-select most recent week on first load if nothing selected
-  useEffect(() => {
-    if (weeksQuery.data && weeksQuery.data.length > 0 && !selectedWeekId) {
-      const latestWeekId = weeksQuery.data[0].id;
-      setSelectedWeekId(latestWeekId);
+      if (keepSelection) {
+        if (keepSelection === selectedWeekId) {
+            fetchTracks(keepSelection);
+        }
+        setSelectedWeekId(keepSelection);
+      } else if (!selectedWeekId && data.length > 0) {
+          const storedWeekId = localStorage.getItem('dj_destiny_selected_week');
+          const weekExists = storedWeekId && data.some(w => w.id === storedWeekId);
+          setSelectedWeekId(weekExists ? storedWeekId : data[0].id);
+      } else if (selectedWeekId && !data.some(w => w.id === selectedWeekId)) {
+          setSelectedWeekId(data[0].id);
+      }
     }
-  }, [weeksQuery.data, selectedWeekId]);
+    setLoadingWeeks(false);
+  };
 
-  // Sync selection to localStorage
+  // Initial Fetch
+  useEffect(() => {
+    fetchWeeks();
+  }, []);
+
+  // Persist selection
   useEffect(() => {
     if (selectedWeekId) {
       localStorage.setItem('dj_destiny_selected_week', selectedWeekId);
     }
   }, [selectedWeekId]);
 
-  // --- Actions ---
-
-  const handleSelectWeek = (id: string) => {
-    setSelectedWeekId(id);
-    // Prefetching is handled by WeekSelector on hover, 
-    // but we could also prefetch adjacent weeks here if we wanted deeper logic.
-  };
-
-  const refreshWeeks = () => {
-    queryClient.invalidateQueries({ queryKey: ['weeks'] });
-  };
-  
-  const refreshTracks = (weekId?: string) => {
-      if (weekId) {
-          queryClient.invalidateQueries({ queryKey: ['tracks', weekId] });
-      } else {
-          queryClient.invalidateQueries({ queryKey: ['tracks'] });
-      }
-  };
-
   return {
-    weeks: weeksQuery.data || [],
+    weeks,
     selectedWeekId,
-    setSelectedWeekId: handleSelectWeek,
-    tracks: tracksQuery.data || [],
-    loadingWeeks: weeksQuery.isLoading,
-    loadingTracks: tracksQuery.isLoading,
-    fetchWeeks: refreshWeeks,
-    fetchTracks: refreshTracks
+    setSelectedWeekId,
+    tracks,
+    setTracks,
+    loadingWeeks,
+    loadingTracks,
+    fetchWeeks,
+    fetchTracks
   };
 };

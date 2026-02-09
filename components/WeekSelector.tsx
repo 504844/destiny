@@ -2,8 +2,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Week } from '../types';
 import { cn, formatLithuanianDate } from '../lib/utils';
 import { ChevronLeft, ChevronRight, ChevronDown, Check } from 'lucide-react';
-import { useQueryClient } from '@tanstack/react-query';
-import { supabase } from '../lib/supabase';
 
 interface WeekSelectorProps {
   weeks: Week[];
@@ -15,7 +13,6 @@ interface WeekSelectorProps {
 export const WeekSelector: React.FC<WeekSelectorProps> = ({ weeks, selectedWeekId, onSelectWeek, isLoading }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const queryClient = useQueryClient();
   
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -27,23 +24,6 @@ export const WeekSelector: React.FC<WeekSelectorProps> = ({ weeks, selectedWeekI
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
-  // --- PREFETCH LOGIC ---
-  const prefetchWeekTracks = async (weekId: string) => {
-    await queryClient.prefetchQuery({
-      queryKey: ['tracks', weekId],
-      queryFn: async () => {
-         const { data, error } = await supabase
-          .from('tracks')
-          .select('id, week_id, title, artists, submitted_by, position, medal, artwork_url, preview_url')
-          .eq('week_id', weekId)
-          .order('position', { ascending: true });
-        if (error) throw error;
-        return data;
-      },
-      staleTime: 1000 * 60 * 5, 
-    });
-  };
 
   if (isLoading || weeks.length === 0) {
     return (
@@ -66,16 +46,12 @@ export const WeekSelector: React.FC<WeekSelectorProps> = ({ weeks, selectedWeekI
     }
   };
 
-  const prevWeekId = currentIndex < weeks.length - 1 ? weeks[currentIndex + 1].id : null;
-  const nextWeekId = currentIndex > 0 ? weeks[currentIndex - 1].id : null;
-
   return (
     <div className="relative inline-flex items-center gap-1.5 p-1 bg-zinc-900/90 backdrop-blur-xl border border-zinc-800/60 rounded-full shadow-2xl ring-1 ring-white/5" ref={dropdownRef}>
       
       {/* Previous Button - Circle */}
       <button 
         onClick={handlePrev}
-        onMouseEnter={() => prevWeekId && prefetchWeekTracks(prevWeekId)}
         disabled={currentIndex >= weeks.length - 1}
         className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-zinc-800 text-zinc-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
         aria-label="Ankstesnė savaitė"
@@ -98,7 +74,6 @@ export const WeekSelector: React.FC<WeekSelectorProps> = ({ weeks, selectedWeekI
       {/* Next Button - Circle */}
       <button 
         onClick={handleNext}
-        onMouseEnter={() => nextWeekId && prefetchWeekTracks(nextWeekId)}
         disabled={currentIndex <= 0}
         className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-zinc-800 text-zinc-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
         aria-label="Sekanti savaitė"
@@ -116,7 +91,6 @@ export const WeekSelector: React.FC<WeekSelectorProps> = ({ weeks, selectedWeekI
                 onSelectWeek(week.id);
                 setIsOpen(false);
               }}
-              onMouseEnter={() => prefetchWeekTracks(week.id)} // Prefetch on hover in dropdown too
               className={cn(
                 "w-full flex items-center justify-between px-3 py-2.5 text-sm rounded-lg transition-all mb-0.5 group",
                 selectedWeekId === week.id 

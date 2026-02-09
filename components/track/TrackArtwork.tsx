@@ -48,11 +48,8 @@ export const TrackArtwork: React.FC<TrackArtworkProps> = ({
               disabled={isRetrying}
               className={cn(
                 "absolute inset-0 flex items-center justify-center transition-all duration-300 z-20",
-                // Show controls ONLY on hover, or if loading. 
-                // This keeps the artwork clean ('beautiful artwork') when just listening.
-                isRetrying 
-                  ? "bg-black/20 opacity-100 cursor-wait" 
-                  : "bg-black/20 opacity-0 group-hover/artwork:opacity-100"
+                isActive ? "bg-black/20 opacity-100" : "bg-black/40 opacity-0 group-hover/artwork:opacity-100",
+                isRetrying && "cursor-wait"
               )}
               title={isActive ? "Pause Preview" : "Play Preview"}
             >
