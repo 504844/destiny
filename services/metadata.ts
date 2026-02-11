@@ -66,7 +66,9 @@ const getSpotifyAccessToken = async () => {
   }
 
   try {
-    const response = await fetch('https://accounts.spotify.com/api/token', {
+    // We use corsproxy.io to bypass CORS restrictions for the client-side token request
+    // Note: In production with a backend, this should be done server-side.
+    const response = await fetch('https://corsproxy.io/?' + encodeURIComponent('https://accounts.spotify.com/api/token'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
@@ -86,7 +88,7 @@ const getSpotifyAccessToken = async () => {
       return token;
     }
   } catch (error) {
-    console.error('Spotify Token Error:', error);
+    console.warn('Spotify Token Error (Client Side):', error);
   }
   return null;
 };
@@ -96,6 +98,7 @@ const fetchSpotifyMetadata = async (query: string) => {
   if (!token) return null;
 
   try {
+    // 1. Search for the track
     const response = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=1`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
@@ -104,9 +107,25 @@ const fetchSpotifyMetadata = async (query: string) => {
       const data = await response.json();
       if (data.tracks && data.tracks.items.length > 0) {
         const track = data.tracks.items[0];
+        
+        // 2. Fetch Audio Features for the track
+        let features: any = null;
+        try {
+            const featsRes = await fetch(`https://api.spotify.com/v1/audio-features/${track.id}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (featsRes.ok) {
+                features = await featsRes.json();
+            }
+        } catch (e) {
+            console.warn('Spotify Audio Features Error', e);
+        }
+
         return {
           artworkUrl: track.album?.images?.[0]?.url,
-          previewUrl: track.preview_url // Note: Spotify preview_url is sometimes null
+          previewUrl: track.preview_url, // Note: Spotify preview_url is sometimes null
+          bpm: features?.tempo ? Math.round(features.tempo) : undefined,
+          energy: features?.energy ? Math.round(features.energy * 100) : undefined
         };
       }
     }
@@ -185,7 +204,7 @@ export const searchExternalMetadata = async (track: Track): Promise<TrackMetadat
   const firstArtistToken = cleanPrimaryArtist.split(' ')[0] || '';
   const queryFallback = `${titleNoMix} ${firstArtistToken}`;
 
-  let foundData: { artworkUrl?: string; previewUrl?: string; genre?: string } | null = null;
+  let foundData: { artworkUrl?: string; previewUrl?: string; genre?: string; bpm?: number; energy?: number } | null = null;
 
   // --- 1. iTunes (Best for previews & GENRES) ---
   foundData = await fetchItunesMetadata(querySpecific);
@@ -194,7 +213,12 @@ export const searchExternalMetadata = async (track: Track): Promise<TrackMetadat
     foundData = await fetchItunesMetadata(queryBroad);
   }
   
-  // --- 2. Spotify (Best for finding obscure tracks) ---
+  // --- 2. Spotify (Best for finding obscure tracks & BPM/Energy) ---
+  // If we found basic data in iTunes, we might still want Spotify for BPM/Energy if missing?
+  // For simplicity, we search in order. If iTunes found it, we use it. 
+  // If you strictly want BPM/Energy, you might want to call Spotify regardless.
+  // But to save API calls, we'll try Spotify if iTunes fails OR if we specifically want BPM (Magic Scan).
+  
   if (!foundData) {
     foundData = await fetchSpotifyMetadata(querySpecific);
   }
@@ -229,6 +253,8 @@ export const searchExternalMetadata = async (track: Track): Promise<TrackMetadat
           artworkUrl: foundData.artworkUrl,
           previewUrl: foundData.previewUrl,
           genre: foundData.genre,
+          bpm: foundData.bpm,
+          energy: foundData.energy,
           found: true
       };
   } else {

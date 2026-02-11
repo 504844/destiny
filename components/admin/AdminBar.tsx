@@ -261,7 +261,13 @@ export const AdminBar: React.FC<AdminBarProps> = ({ weeks, onSuccess, onClose })
           .insert({ week_number: weekNumber, date_range: dateRange, spotify_url: spotifyUrl || null, track_count: tracks.length })
           .select()
           .single();
-        if (wErr) throw wErr;
+          
+        if (wErr) {
+            if (wErr.code === '23505') { // Unique violation
+                throw new Error(`Savaitė #${weekNumber} jau egzistuoja! Grįžkite ir naudokite UPDATE režimą.`);
+            }
+            throw wErr;
+        }
         weekId = wData.id;
       }
 
@@ -289,8 +295,9 @@ export const AdminBar: React.FC<AdminBarProps> = ({ weeks, onSuccess, onClose })
       }, 1500);
 
     } catch (e: any) {
+      console.error(e);
       setStatus('error');
-      setStatusMsg(e.message);
+      setStatusMsg(e.message || "Įvyko klaida");
     }
   };
 
