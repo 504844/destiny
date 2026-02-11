@@ -4,6 +4,9 @@ export interface TrackMetadataResult {
   artworkUrl?: string;
   previewUrl?: string;
   genre?: string;
+  bpm?: number;
+  energy?: number;
+  country?: string;
   found: boolean;
 }
 

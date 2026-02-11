@@ -18,6 +18,9 @@ export interface Track {
   artwork_url?: string | null;
   preview_url?: string | null;
   genre?: string | null;
+  bpm?: number | null;
+  energy?: number | null;
+  country?: string | null;
   created_at: string;
 }
 
@@ -27,6 +30,9 @@ export interface DraftTrack {
   submitted_by: string | null;
   position: number;
   medal: 'gold' | 'silver' | 'bronze' | null;
+  bpm?: number | null;
+  energy?: number | null;
+  country?: string | null;
 }
 
 export type MedalType = 'gold' | 'silver' | 'bronze' | null;
