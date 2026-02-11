@@ -17,7 +17,6 @@ interface HomeViewProps {
   highlightedTrackId: string | null;
   onSearchClick: () => void;
   isAdmin: boolean;
-  onEditWeek: () => void;
 }
 
 export const HomeView: React.FC<HomeViewProps> = ({
@@ -34,7 +33,6 @@ export const HomeView: React.FC<HomeViewProps> = ({
   highlightedTrackId,
   onSearchClick,
   isAdmin,
-  onEditWeek
 }) => {
   const currentWeek = weeks.find(w => w.id === selectedWeekId);
 
@@ -56,7 +54,6 @@ export const HomeView: React.FC<HomeViewProps> = ({
             onSearchClick={onSearchClick}
             isAdmin={isAdmin}
             currentWeek={currentWeek}
-            onEditWeek={onEditWeek}
           />
 
           {loadingWeeks ? (

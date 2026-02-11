@@ -64,7 +64,10 @@ export const TrackList: React.FC<TrackListProps> = ({
           <div className="grid gap-2">
             {tracks.map((track) => (
               <TrackItem 
-                key={track.id} 
+                // CRITICAL: We use track.position as key so the row component persists 
+                // across week switches. This allows the internal content to animate (blur-in)
+                // while the number box stays static.
+                key={`pos-${track.position}`} 
                 track={track} 
                 isActive={playingTrackId === track.id}
                 onPlay={() => onPlayTrack(track.id)}

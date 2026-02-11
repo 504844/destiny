@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { Track, Week } from '../types';
 import { SearchInput } from './search/SearchInput';
@@ -23,6 +23,10 @@ export const CommandSearch: React.FC<CommandSearchProps> = ({ isOpen, onClose, w
   const [results, setResults] = useState<SearchResultItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [recentUsers, setRecentUsers] = useState<string[]>([]);
+  
+  // Navigation State
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const listContainerRef = useRef<HTMLDivElement>(null);
 
   // Load Recents on Mount
   useEffect(() => {
@@ -36,26 +40,62 @@ export const CommandSearch: React.FC<CommandSearchProps> = ({ isOpen, onClose, w
     }
   }, []);
 
-  // Reset on close
+  // Reset logic
   useEffect(() => {
     if (!isOpen) {
       setQuery('');
       setResults([]);
+      setSelectedIndex(0);
+    } else {
+      setSelectedIndex(0);
     }
   }, [isOpen]);
 
-  // Handle keyboard interaction (Esc to close)
+  // Determine active item count for navigation
+  const itemCount = query ? results.length : recentUsers.length;
+
+  // Keyboard Navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (!isOpen) return;
+
+      if (e.key === 'Escape') {
+        onClose();
+        return;
+      }
+
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setSelectedIndex(prev => (prev + 1) % (itemCount || 1));
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setSelectedIndex(prev => (prev - 1 + (itemCount || 1)) % (itemCount || 1));
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (query) {
+          const item = results[selectedIndex];
+          if (item) {
+            if (item.type === 'user') handleSelectUser(item.username);
+            else if (item.data) handleSelectTrack(item.data.week_id, item.data.id);
+          }
+        } else {
+          const user = recentUsers[selectedIndex];
+          if (user) handleSelectUser(user);
+        }
+      }
     };
+
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
+  }, [isOpen, itemCount, results, recentUsers, selectedIndex, query]);
+
+  // Reset index on query change
+  useEffect(() => {
+    setSelectedIndex(0);
+  }, [query]);
 
   const saveRecentUser = (username: string) => {
-    // Remove if exists to move to top, limit to 5
-    const newRecents = [username, ...recentUsers.filter(u => u !== username)].slice(0, 5);
+    const newRecents = [username, ...recentUsers.filter(u => u !== username)].slice(0, 8); // Increased limit for grid
     setRecentUsers(newRecents);
     localStorage.setItem('dj_destiny_recent_users', JSON.stringify(newRecents));
   };
@@ -73,6 +113,11 @@ export const CommandSearch: React.FC<CommandSearchProps> = ({ isOpen, onClose, w
     onClose();
   };
 
+  const handleSelectTrack = (weekId: string, trackId: string) => {
+    onSelectResult(weekId, trackId);
+    onClose();
+  };
+
   // Debounced Search
   useEffect(() => {
     const timer = setTimeout(async () => {
@@ -84,47 +129,37 @@ export const CommandSearch: React.FC<CommandSearchProps> = ({ isOpen, onClose, w
       setLoading(true);
       
       try {
-        // 1. Fetch Tracks matching Title OR Artist OR Submitter
         const { data: trackData, error } = await supabase
           .from('tracks')
           .select('*')
           .or(`title.ilike.%${query}%,artists.ilike.%${query}%,submitted_by.ilike.%${query}%`)
           .order('created_at', { ascending: false })
-          .limit(50); // Increased limit slightly to account for aggregation
+          .limit(50);
 
         if (trackData) {
           const finalResults: SearchResultItem[] = [];
           const tracks = trackData as Track[];
-
-          // 2. Extract Unique Users (Using Alias System)
           const matchingUsers = new Map<string, number>();
           const lowerQuery = query.toLowerCase();
 
           tracks.forEach(t => {
             if (t.submitted_by) {
-              // Check if the actual submitted name matches query
-              // OR if the primary name matches query
               const primaryName = getPrimaryUsername(t.submitted_by);
-              
               const nameMatch = t.submitted_by.toLowerCase().includes(lowerQuery);
               const primaryMatch = primaryName.toLowerCase().includes(lowerQuery);
 
               if (nameMatch || primaryMatch) {
-                // We always aggregate count under the Primary Name
                 matchingUsers.set(primaryName, (matchingUsers.get(primaryName) || 0) + 1);
               }
             }
           });
 
-          // Add User Results (Aggregated)
+          // Order: Users first, then Tracks
           Array.from(matchingUsers.entries()).forEach(([username, count]) => {
             finalResults.push({ type: 'user', username, count });
           });
 
-          // Add Track Results
           tracks.forEach(t => {
-            // Only show tracks where title/artist matches query if query isn't just a user search
-            // (Optional refinement, but currently we show all matches)
             finalResults.push({ type: 'track', data: t });
           });
 
@@ -143,7 +178,7 @@ export const CommandSearch: React.FC<CommandSearchProps> = ({ isOpen, onClose, w
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh] px-4">
+    <div className="fixed inset-0 z-50 flex items-start justify-center pt-[10vh] px-4">
       {/* Backdrop */}
       <div 
         className="fixed inset-0 bg-black/80 backdrop-blur-md animate-in fade-in duration-300" 
@@ -151,7 +186,7 @@ export const CommandSearch: React.FC<CommandSearchProps> = ({ isOpen, onClose, w
       />
 
       {/* Modal */}
-      <div className="relative w-full max-w-2xl bg-zinc-950 border border-zinc-800 rounded-2xl shadow-2xl shadow-black/50 overflow-hidden ring-1 ring-white/5 animate-in zoom-in-95 fade-in slide-in-from-top-4 duration-300 flex flex-col max-h-[70vh]">
+      <div className="relative w-full max-w-2xl bg-zinc-950 border border-zinc-800 rounded-2xl shadow-2xl shadow-black/50 overflow-hidden ring-1 ring-white/5 animate-in zoom-in-95 fade-in slide-in-from-top-4 duration-300 flex flex-col max-h-[75vh]">
         
         <SearchInput 
           query={query} 
@@ -160,7 +195,7 @@ export const CommandSearch: React.FC<CommandSearchProps> = ({ isOpen, onClose, w
           loading={loading}
         />
 
-        <div className="overflow-y-auto p-2 custom-scrollbar bg-black/20">
+        <div ref={listContainerRef} className="overflow-y-auto p-4 custom-scrollbar bg-black/20 min-h-[300px]">
           
           {/* Recent Searches (When Query is Empty) */}
           {!query && (
@@ -168,13 +203,18 @@ export const CommandSearch: React.FC<CommandSearchProps> = ({ isOpen, onClose, w
               recentUsers={recentUsers} 
               onSelectUser={handleSelectUser} 
               onRemoveUser={removeRecentUser} 
+              selectedIndex={selectedIndex}
             />
           )}
 
           {/* Empty State when no query and no history */}
           {!query && recentUsers.length === 0 && (
-             <div className="py-20 text-center text-zinc-700 select-none pointer-events-none">
-                <p className="text-sm">Įveskite bent 2 simbolius...</p>
+             <div className="h-full flex flex-col items-center justify-center text-zinc-700 select-none pt-12 pb-20">
+                <div className="w-16 h-16 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center mb-4">
+                  <span className="text-2xl">⚡</span>
+                </div>
+                <p className="text-sm font-medium text-zinc-500">Pradėkite rašyti...</p>
+                <p className="text-xs text-zinc-700 mt-1">Galite ieškoti dainų, atlikėjų arba vartotojų</p>
              </div>
           )}
 
@@ -184,23 +224,30 @@ export const CommandSearch: React.FC<CommandSearchProps> = ({ isOpen, onClose, w
               results={results} 
               query={query} 
               onSelectUser={handleSelectUser} 
-              onSelectResult={(weekId, trackId) => {
-                onSelectResult(weekId, trackId);
-                onClose();
-              }}
+              onSelectResult={handleSelectTrack}
               weeks={weeks}
+              selectedIndex={selectedIndex}
             />
           )}
 
         </div>
         
         {/* Footer */}
-        <div className="px-4 py-3 bg-zinc-950 border-t border-zinc-800 flex justify-between items-center text-[10px] text-zinc-500">
+        <div className="px-4 py-3 bg-zinc-950/80 border-t border-zinc-800 flex justify-between items-center text-[10px] text-zinc-500 backdrop-blur-sm">
            <div className="flex gap-4">
-               <span className="flex items-center gap-1"><span className="bg-zinc-800 px-1 rounded">↵</span> pasirinkti</span>
-               <span className="flex items-center gap-1"><span className="bg-zinc-800 px-1 rounded">↑↓</span> naviguoti</span>
+               <span className="flex items-center gap-1.5">
+                 <kbd className="bg-zinc-800 border border-zinc-700 px-1.5 py-0.5 rounded text-zinc-300 font-sans">↵</kbd> 
+                 pasirinkti
+               </span>
+               <span className="flex items-center gap-1.5">
+                 <kbd className="bg-zinc-800 border border-zinc-700 px-1.5 py-0.5 rounded text-zinc-300 font-sans">↑↓</kbd> 
+                 naviguoti
+               </span>
+               <span className="flex items-center gap-1.5">
+                 <kbd className="bg-zinc-800 border border-zinc-700 px-1.5 py-0.5 rounded text-zinc-300 font-sans">ESC</kbd> 
+                 uždaryti
+               </span>
            </div>
-           <span className="font-medium text-zinc-600">Smart Search v2.1</span>
         </div>
       </div>
     </div>

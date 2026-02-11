@@ -155,7 +155,7 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, isActive, onPlay, o
       )}
       style={expandedStyle}
     >
-      {/* Position / Medal - Hide on mobile when active, show on desktop */}
+      {/* Position / Medal - STATIC (Outside the animated wrapper) */}
       <div className={cn(
         "flex-shrink-0 flex items-center justify-center transition-all duration-500 rounded-lg w-8 h-8 min-w-[2rem]",
         getRankStyle(track.medal),
@@ -166,28 +166,39 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, isActive, onPlay, o
         </span>
       </div>
 
-      <TrackArtwork 
-        artworkUrl={metadata.artworkUrl}
-        title={track.title}
-        isActive={isActive}
-        isRetrying={isRetrying}
-        hasPreview={!!metadata.previewUrl}
-        progress={progress}
-        onTogglePlay={togglePlay}
-      />
+      {/* Dynamic Content Wrapper - Animates on Track Change */}
+      <div 
+        key={track.id} 
+        className={cn(
+          "flex-1 flex min-w-0 animate-blur-in",
+          isActive 
+            ? "flex-col sm:flex-row items-center gap-4 sm:gap-6 w-full" 
+            : "flex-row items-center gap-3 sm:gap-4"
+        )}
+      >
+        <TrackArtwork 
+            artworkUrl={metadata.artworkUrl}
+            title={track.title}
+            isActive={isActive}
+            isRetrying={isRetrying}
+            hasPreview={!!metadata.previewUrl}
+            progress={progress}
+            onTogglePlay={togglePlay}
+        />
 
-      <TrackInfo 
-        title={track.title} 
-        artists={track.artists} 
-        submittedBy={track.submitted_by} 
-        isActive={isActive}
-        genre={metadata.genre}
-      />
+        <TrackInfo 
+            title={track.title} 
+            artists={track.artists} 
+            submittedBy={track.submitted_by} 
+            isActive={isActive}
+            genre={metadata.genre}
+        />
 
-      <TrackActions 
-        track={track} 
-        isActive={isActive} 
-      />
+        <TrackActions 
+            track={track} 
+            isActive={isActive} 
+        />
+      </div>
     </div>
   );
 };

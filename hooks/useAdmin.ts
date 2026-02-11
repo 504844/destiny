@@ -4,17 +4,17 @@ export const useAdmin = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [logoClicks, setLogoClicks] = useState(0);
-  
-  // adminPanelMode: null = hidden, 'create' = new upload, 'edit' = edit current
-  const [adminPanelMode, setAdminPanelMode] = useState<'create' | 'edit' | null>(null);
+  const [isConsoleOpen, setIsConsoleOpen] = useState(false);
 
   const handleLogoClick = () => {
     setLogoClicks(prev => {
       const newCount = prev + 1;
       if (newCount === 3) {
         if (isAdmin) {
-          setAdminPanelMode('create');
+          // If already admin, just toggle the console
+          setIsConsoleOpen(prev => !prev);
         } else {
+          // If not admin, ask for password
           setShowLoginModal(true);
         }
         return 0;
@@ -26,20 +26,21 @@ export const useAdmin = () => {
   const login = () => {
     setIsAdmin(true);
     setShowLoginModal(false);
-    setAdminPanelMode('create');
+    setIsConsoleOpen(true);
   };
 
   const closeLoginModal = () => setShowLoginModal(false);
-  const closeAdminPanel = () => setAdminPanelMode(null);
+  const toggleConsole = () => setIsConsoleOpen(prev => !prev);
+  const closeConsole = () => setIsConsoleOpen(false);
 
   return {
     isAdmin,
     showLoginModal,
-    adminPanelMode,
-    setAdminPanelMode,
+    isConsoleOpen,
     handleLogoClick,
     login,
     closeLoginModal,
-    closeAdminPanel
+    toggleConsole,
+    closeConsole
   };
 };

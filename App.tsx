@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from './lib/supabase';
 import { Track } from './types';
-import { AdminPanel } from './components/AdminPanel';
+import { AdminBar } from './components/admin/AdminBar';
 import { LoginModal } from './components/LoginModal';
 import { CommandSearch } from './components/CommandSearch';
 import { UserProfile } from './components/UserProfile';
@@ -30,8 +30,8 @@ const App: React.FC = () => {
   const { playingTrackId, playTrack, stopTrack } = useAudioPlayer();
   
   const { 
-    isAdmin, showLoginModal, adminPanelMode, setAdminPanelMode, 
-    handleLogoClick, login, closeLoginModal, closeAdminPanel 
+    isAdmin, showLoginModal, isConsoleOpen, 
+    handleLogoClick, login, closeLoginModal, toggleConsole, closeConsole 
   } = useAdmin();
 
   // Search & Highlight state
@@ -53,11 +53,7 @@ const App: React.FC = () => {
     setProfileTracks([]); // Clear previous tracks
     
     try {
-      // Get all aliases (e.g., 'imantulis', 'imantulis ^_^')
       const aliases = getAllAliases(username);
-
-      // Construct a case-insensitive OR filter for Supabase
-      // This allows 'imantulis' to match 'ImantUlis' in the DB
       const filterQuery = aliases.map(alias => `submitted_by.ilike.${alias}`).join(',');
 
       const { data } = await supabase
@@ -79,7 +75,6 @@ const App: React.FC = () => {
     setViewMode('HOME');
     setSelectedProfileUser(null);
     setProfileTracks([]);
-    // Restore track list for current week
     if (selectedWeekId) {
         fetchTracks(selectedWeekId);
     }
@@ -100,7 +95,6 @@ const App: React.FC = () => {
   const handleSearchResult = (weekId: string, trackId: string) => {
     setIsSearchOpen(false);
     
-    // If we are in profile mode, switch back to home
     if (viewMode === 'PROFILE') {
         setViewMode('HOME');
     }
@@ -114,9 +108,7 @@ const App: React.FC = () => {
     }, 3000);
   };
 
-  // Logic for when to fetch tracks (dependent on view mode)
   useEffect(() => {
-    // Only fetch if in HOME mode and week changed
     if (selectedWeekId && viewMode === 'HOME') {
       fetchTracks(selectedWeekId);
     }
@@ -143,19 +135,12 @@ const App: React.FC = () => {
         />
       )}
 
-      {adminPanelMode && (
-        <AdminPanel 
-          onClose={closeAdminPanel} 
-          initialData={adminPanelMode === 'edit' && currentWeek ? {
-            weekId: currentWeek.id,
-            weekNumber: currentWeek.week_number,
-            dateRange: currentWeek.date_range,
-            spotifyUrl: currentWeek.spotify_url || '',
-            tracks: tracks
-          } : null}
-          onSuccess={(weekId) => {
-            fetchWeeks(weekId);
-          }} 
+      {/* Headless Admin Console */}
+      {isAdmin && isConsoleOpen && (
+        <AdminBar 
+          weeks={weeks}
+          onClose={closeConsole}
+          onSuccess={(weekId) => fetchWeeks(weekId)}
         />
       )}
 
@@ -184,7 +169,6 @@ const App: React.FC = () => {
             highlightedTrackId={highlightedTrackId}
             onSearchClick={() => setIsSearchOpen(true)}
             isAdmin={isAdmin}
-            onEditWeek={() => setAdminPanelMode('edit')}
           />
         ) : (
           <UserProfile 

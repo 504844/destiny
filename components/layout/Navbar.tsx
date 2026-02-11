@@ -37,10 +37,10 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogoClick, onSearchClick }) =>
           className="hidden md:flex items-center gap-3 px-4 py-2.5 rounded-xl bg-zinc-900/50 hover:bg-zinc-900 border border-zinc-800/50 hover:border-zinc-700 hover:ring-1 hover:ring-indigo-500/20 transition-all group w-full max-w-sm mx-4"
         >
           <Search className="w-4 h-4 text-zinc-500 group-hover:text-zinc-300 transition-colors" />
-          <span className="text-sm font-medium text-zinc-500 group-hover:text-zinc-300 transition-colors">Ieškoti atlikėjų...</span>
+          <span className="text-sm font-medium text-zinc-500 group-hover:text-zinc-300 transition-colors">Dainų paieška</span>
           <div className="ml-auto flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-zinc-800 border border-zinc-700">
              <Command className="w-2.5 h-2.5 text-zinc-500" />
-             <span className="text-[10px] font-bold text-zinc-500">K</span>
+             <span className="text-[10px] font-bold text-zinc-500">F</span>
           </div>
         </button>
 
