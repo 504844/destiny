@@ -1,4 +1,5 @@
 import { Track } from '../types';
+import { supabase } from '../lib/supabase';
 
 export interface TrackMetadataResult {
   artworkUrl?: string;
@@ -48,89 +49,35 @@ export const cleanString = (text: string, keepParenthesesContent: boolean = fals
     .trim();
 };
 
-// --- API Config ---
-const SPOTIFY_CLIENT_ID = (import.meta as any).env?.VITE_SPOTIFY_CLIENT_ID || '9427a52344624526b28494d0104951ff';
-const SPOTIFY_CLIENT_SECRET = (import.meta as any).env?.VITE_SPOTIFY_CLIENT_SECRET || 'f6b01f4984554edcb4f793feb6d52b9e';
-
 // --- API Fetchers ---
 
-const getSpotifyAccessToken = async () => {
-  if (!SPOTIFY_CLIENT_ID || !SPOTIFY_CLIENT_SECRET) return null;
-
-  // Check localStorage for cached token
-  const cachedToken = localStorage.getItem('spotify_access_token');
-  const tokenExpiry = localStorage.getItem('spotify_token_expiry');
-
-  if (cachedToken && tokenExpiry && Date.now() < parseInt(tokenExpiry)) {
-    return cachedToken;
-  }
-
+const fetchMetadataFromEdgeFunction = async (query: string) => {
   try {
-    // We use corsproxy.io to bypass CORS restrictions for the client-side token request
-    // Note: In production with a backend, this should be done server-side.
-    const response = await fetch('https://corsproxy.io/?' + encodeURIComponent('https://accounts.spotify.com/api/token'), {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Authorization': 'Basic ' + btoa(SPOTIFY_CLIENT_ID + ':' + SPOTIFY_CLIENT_SECRET)
-      },
-      body: 'grant_type=client_credentials'
+    console.log(`[Edge Function] Requesting metadata for: "${query}"`);
+    const { data, error } = await supabase.functions.invoke('scan-metadata', {
+      body: { query }
     });
 
-    if (response.ok) {
-      const data = await response.json();
-      const token = data.access_token;
-      const expiresIn = data.expires_in; // usually 3600 seconds
-      
-      localStorage.setItem('spotify_access_token', token);
-      localStorage.setItem('spotify_token_expiry', (Date.now() + (expiresIn * 1000)).toString());
-      
-      return token;
+    if (error) {
+      console.warn('[Edge Function] Invocation failed:', error);
+      return null;
     }
-  } catch (error) {
-    console.warn('Spotify Token Error (Client Side):', error);
-  }
-  return null;
-};
 
-const fetchSpotifyMetadata = async (query: string) => {
-  const token = await getSpotifyAccessToken();
-  if (!token) return null;
-
-  try {
-    // 1. Search for the track
-    const response = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=1`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-
-    if (response.ok) {
-      const data = await response.json();
-      if (data.tracks && data.tracks.items.length > 0) {
-        const track = data.tracks.items[0];
-        
-        // 2. Fetch Audio Features for the track
-        let features: any = null;
-        try {
-            const featsRes = await fetch(`https://api.spotify.com/v1/audio-features/${track.id}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (featsRes.ok) {
-                features = await featsRes.json();
-            }
-        } catch (e) {
-            console.warn('Spotify Audio Features Error', e);
-        }
-
-        return {
-          artworkUrl: track.album?.images?.[0]?.url,
-          previewUrl: track.preview_url, // Note: Spotify preview_url is sometimes null
-          bpm: features?.tempo ? Math.round(features.tempo) : undefined,
-          energy: features?.energy ? Math.round(features.energy * 100) : undefined
-        };
-      }
+    if (data && data.found) {
+      console.log('[Edge Function] Match found:', data.title);
+      return {
+        artworkUrl: data.artworkUrl,
+        previewUrl: data.previewUrl,
+        bpm: data.bpm,
+        energy: data.energy,
+        country: data.country,
+        genre: null // Edge function (Spotify) doesn't reliably give genre per track
+      };
+    } else {
+      console.log('[Edge Function] No match found.');
     }
-  } catch (error) {
-    console.warn('Spotify search failed:', error);
+  } catch (err) {
+    console.error('[Edge Function] System Error:', err);
   }
   return null;
 };
@@ -177,7 +124,7 @@ const fetchItunesMetadata = async (query: string) => {
         return {
           artworkUrl: result.artworkUrl100 || result.artworkUrl60,
           previewUrl: result.previewUrl,
-          genre: result.primaryGenreName // Extract Genre
+          genre: result.primaryGenreName
         };
       }
     }
@@ -200,34 +147,32 @@ export const searchExternalMetadata = async (track: Track): Promise<TrackMetadat
   const titleNoMix = cleanString(track.title, false);
   const queryBroad = `${titleNoMix} ${cleanPrimaryArtist}`;
 
-  // Query C: "Fallback"
-  const firstArtistToken = cleanPrimaryArtist.split(' ')[0] || '';
-  const queryFallback = `${titleNoMix} ${firstArtistToken}`;
+  let foundData: { artworkUrl?: string; previewUrl?: string; genre?: string; bpm?: number; energy?: number; country?: string } | null = null;
 
-  let foundData: { artworkUrl?: string; previewUrl?: string; genre?: string; bpm?: number; energy?: number } | null = null;
-
-  // --- 1. iTunes (Best for previews & GENRES) ---
-  foundData = await fetchItunesMetadata(querySpecific);
-  
+  // --- 1. Edge Function (Spotify - Best for BPM/Energy/Artwork) ---
+  // This replaces the old client-side Spotify logic that caused CORS errors.
+  foundData = await fetchMetadataFromEdgeFunction(querySpecific);
   if (!foundData && queryBroad !== querySpecific) {
-    foundData = await fetchItunesMetadata(queryBroad);
-  }
-  
-  // --- 2. Spotify (Best for finding obscure tracks & BPM/Energy) ---
-  // If we found basic data in iTunes, we might still want Spotify for BPM/Energy if missing?
-  // For simplicity, we search in order. If iTunes found it, we use it. 
-  // If you strictly want BPM/Energy, you might want to call Spotify regardless.
-  // But to save API calls, we'll try Spotify if iTunes fails OR if we specifically want BPM (Magic Scan).
-  
-  if (!foundData) {
-    foundData = await fetchSpotifyMetadata(querySpecific);
-  }
-  
-  if (!foundData && queryBroad !== querySpecific) {
-    foundData = await fetchSpotifyMetadata(queryBroad);
+    foundData = await fetchMetadataFromEdgeFunction(queryBroad);
   }
 
-  // --- 3. Deezer (Fallback) ---
+  // --- 2. iTunes (Best for Genres & Previews if Spotify fails) ---
+  let itunesData = await fetchItunesMetadata(querySpecific);
+  if (!itunesData && queryBroad !== querySpecific) {
+    itunesData = await fetchItunesMetadata(queryBroad);
+  }
+
+  // Merge iTunes genre/preview into foundData if available
+  if (itunesData) {
+    if (!foundData) {
+        foundData = itunesData;
+    } else {
+        if (!foundData.genre) foundData.genre = itunesData.genre;
+        if (!foundData.previewUrl) foundData.previewUrl = itunesData.previewUrl;
+    }
+  }
+
+  // --- 3. Deezer (Last Resort) ---
   if (!foundData) {
     const deezerData = await fetchDeezerMetadata(querySpecific);
     if (deezerData?.data?.[0]) {
@@ -235,30 +180,16 @@ export const searchExternalMetadata = async (track: Track): Promise<TrackMetadat
     }
   }
 
-  if (!foundData && queryBroad !== querySpecific) {
-    const deezerData = await fetchDeezerMetadata(queryBroad);
-    if (deezerData?.data?.[0]) {
-       foundData = { artworkUrl: deezerData.data[0].album?.cover_medium, previewUrl: deezerData.data[0].preview };
-    }
-  }
-
-  // --- 4. Final Fallback (iTunes fuzzy) ---
-  if (!foundData && firstArtistToken) {
-     foundData = await fetchItunesMetadata(queryFallback);
-  }
-
   if (foundData) {
-      console.log(`[Metadata] Search success for "${track.title}":`, foundData);
       return {
           artworkUrl: foundData.artworkUrl,
           previewUrl: foundData.previewUrl,
           genre: foundData.genre,
           bpm: foundData.bpm,
           energy: foundData.energy,
+          country: foundData.country,
           found: true
       };
-  } else {
-      console.log(`[Metadata] No results found for "${track.title}"`);
   }
 
   return null;

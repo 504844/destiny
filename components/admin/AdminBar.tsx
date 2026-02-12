@@ -32,6 +32,7 @@ export const AdminBar: React.FC<AdminBarProps> = ({ weeks, onSuccess, onClose })
   const [status, setStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');
   const [statusMsg, setStatusMsg] = useState('');
   const [isScanning, setIsScanning] = useState(false);
+  const [scanProgress, setScanProgress] = useState(0); // Add Scan Progress State
   const [isEditingTrack, setIsEditingTrack] = useState<string | null>(null);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
@@ -74,6 +75,7 @@ export const AdminBar: React.FC<AdminBarProps> = ({ weeks, onSuccess, onClose })
     setSpotifyUrl('');
     setViewMode('INPUT');
     setStatus('idle');
+    setScanProgress(0);
   };
 
   const loadExistingWeekData = async () => {
@@ -118,11 +120,14 @@ export const AdminBar: React.FC<AdminBarProps> = ({ weeks, onSuccess, onClose })
   const handleMagicScan = async () => {
       if (isScanning) return;
       setIsScanning(true);
+      setScanProgress(0);
       
       const newTracks = [...tracks];
       let updatedCount = 0;
 
       for (let i = 0; i < newTracks.length; i++) {
+          setScanProgress(Math.round(((i + 1) / newTracks.length) * 100)); // Update progress
+          
           const track = newTracks[i];
           // Skip if already has full data
           if (track.bpm && track.energy) continue;
@@ -145,14 +150,15 @@ export const AdminBar: React.FC<AdminBarProps> = ({ weeks, onSuccess, onClose })
                       ...track,
                       bpm: result.bpm || track.bpm,
                       energy: result.energy || track.energy,
+                      country: result.country || track.country
                   };
                   updatedCount++;
-                  // Force update UI every few items so user sees progress
-                  if (updatedCount % 2 === 0) setTracks([...newTracks]);
+                  // Update UI every item to show real-time changes
+                  setTracks([...newTracks]);
               }
               
-              // Slight delay to avoid rate limits
-              await new Promise(r => setTimeout(r, 200));
+              // Slight delay to avoid browser stutter
+              await new Promise(r => setTimeout(r, 100));
               
           } catch (e) {
               console.warn("Scan failed for", track.title);
@@ -161,7 +167,7 @@ export const AdminBar: React.FC<AdminBarProps> = ({ weeks, onSuccess, onClose })
       
       setTracks(newTracks);
       setIsScanning(false);
-      alert(`Scan complete! Updated ${updatedCount} tracks.`);
+      setScanProgress(0);
   };
 
   const handleTrackChange = (id: string, field: keyof DraftTrackWithId, value: any) => {
@@ -339,15 +345,18 @@ export const AdminBar: React.FC<AdminBarProps> = ({ weeks, onSuccess, onClose })
                         onClick={handleMagicScan}
                         disabled={isScanning}
                         className={cn(
-                            "px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-2 border",
+                            "px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-2 border overflow-hidden relative",
                             isScanning 
-                                ? "bg-indigo-500/20 text-indigo-300 border-indigo-500/30 animate-pulse" 
+                                ? "bg-zinc-900 text-indigo-300 border-indigo-500/30 cursor-not-allowed" 
                                 : "bg-indigo-500 hover:bg-indigo-400 text-white border-transparent shadow-lg shadow-indigo-500/20"
                         )}
                         title="Auto-fill BPM and Energy from Spotify"
                     >
-                        <Wand2 className={cn("w-3.5 h-3.5", isScanning && "animate-spin")} />
-                        {isScanning ? 'Scanning...' : 'Auto-Fill Stats'}
+                        {isScanning && (
+                            <div className="absolute inset-0 bg-indigo-500/20" style={{ width: `${scanProgress}%`, transition: 'width 0.2s ease' }} />
+                        )}
+                        <Wand2 className={cn("w-3.5 h-3.5 relative z-10", isScanning && "animate-spin")} />
+                        <span className="relative z-10">{isScanning ? `Scanning ${scanProgress}%` : 'Auto-Fill Stats'}</span>
                     </button>
                     <div className="w-px h-6 bg-zinc-800 mx-1" />
                     <button 
@@ -557,14 +566,14 @@ export const AdminBar: React.FC<AdminBarProps> = ({ weeks, onSuccess, onClose })
                                         {/* Status Pills */}
                                         <div className="flex items-center gap-1">
                                             {track.bpm && track.energy ? (
-                                                <div className="px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-[9px] font-mono">
+                                                <div className="px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-[9px] font-mono animate-in fade-in">
                                                     {track.bpm} / {track.energy}
                                                 </div>
                                             ) : (
                                                 <div className="w-1.5 h-1.5 rounded-full bg-zinc-800" title="Missing Audio Features" />
                                             )}
                                             {track.country ? (
-                                                <div className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px] font-mono">
+                                                <div className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px] font-mono animate-in fade-in">
                                                     {track.country}
                                                 </div>
                                             ) : (

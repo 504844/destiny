@@ -9,6 +9,9 @@ export const useTrackMetadata = (track: Track) => {
     artworkUrl: track.artwork_url || undefined,
     previewUrl: track.preview_url || undefined,
     genre: track.genre || undefined,
+    bpm: track.bpm || undefined,
+    energy: track.energy || undefined,
+    country: track.country || undefined,
     found: !!track.artwork_url 
   });
   
@@ -22,15 +25,15 @@ export const useTrackMetadata = (track: Track) => {
 
     const initMetadata = async () => {
       // 1. Always sync local state with the incoming track prop first.
-      // This is crucial because the component might be reused (recycled) by React,
-      // retaining the previous track's state if we don't overwrite it.
-      
-      const hasCompleteData = !!(track.artwork_url && track.genre);
+      const hasCompleteData = !!(track.artwork_url && track.genre && track.bpm);
       
       setMetadata({
         artworkUrl: track.artwork_url || undefined,
         previewUrl: track.preview_url || undefined,
         genre: track.genre || undefined,
+        bpm: track.bpm || undefined,
+        energy: track.energy || undefined,
+        country: track.country || undefined,
         found: !!track.artwork_url
       });
       
@@ -43,7 +46,6 @@ export const useTrackMetadata = (track: Track) => {
       setIsLoadingMetadata(true);
       
       // Artificial delay for staggering visual pop-in (optional aesthetic choice)
-      // Only do this if we are actually going to fetch new data
       await new Promise(resolve => setTimeout(resolve, 300 + Math.random() * 500));
       if (!isMounted) return;
 
@@ -57,11 +59,17 @@ export const useTrackMetadata = (track: Track) => {
         const newArtworkUrl = track.artwork_url || foundData.artworkUrl;
         const newPreviewUrl = track.preview_url || foundData.previewUrl;
         const newGenre = track.genre || foundData.genre;
+        const newBpm = track.bpm || foundData.bpm;
+        const newEnergy = track.energy || foundData.energy;
+        const newCountry = track.country || foundData.country;
 
         setMetadata({
           artworkUrl: newArtworkUrl,
           previewUrl: newPreviewUrl,
           genre: newGenre,
+          bpm: newBpm,
+          energy: newEnergy,
+          country: newCountry,
           found: true
         });
 
@@ -70,6 +78,9 @@ export const useTrackMetadata = (track: Track) => {
         if (!track.artwork_url && foundData.artworkUrl) updates.artwork_url = foundData.artworkUrl;
         if (!track.preview_url && foundData.previewUrl) updates.preview_url = foundData.previewUrl;
         if (!track.genre && foundData.genre) updates.genre = foundData.genre;
+        if (!track.bpm && foundData.bpm) updates.bpm = foundData.bpm;
+        if (!track.energy && foundData.energy) updates.energy = foundData.energy;
+        if (!track.country && foundData.country) updates.country = foundData.country;
 
         if (Object.keys(updates).length > 0) {
           supabase.from('tracks').update(updates).eq('id', track.id).then(({ error }) => {
@@ -86,11 +97,11 @@ export const useTrackMetadata = (track: Track) => {
     return () => {
       isMounted = false;
     };
-  }, [track]); // Reruns whenever the track object changes (e.g. week switch)
+  }, [track]); // Reruns whenever the track object changes
 
   // Dominant Color Extraction
   useEffect(() => {
-    setDominantColor(null); // Reset color immediately on change
+    setDominantColor(null);
     if (metadata.artworkUrl) {
       const fac = new FastAverageColor();
       fac.getColorAsync(metadata.artworkUrl, { 
@@ -119,10 +130,18 @@ export const useTrackMetadata = (track: Track) => {
               artwork_url: freshData.artworkUrl || track.artwork_url
           };
           if (!track.genre && freshData.genre) updates.genre = freshData.genre;
+          if (!track.bpm && freshData.bpm) updates.bpm = freshData.bpm;
+          if (!track.energy && freshData.energy) updates.energy = freshData.energy;
 
           await supabase.from('tracks').update(updates).eq('id', track.id);
           
-          setMetadata(prev => ({ ...prev, ...freshData, genre: track.genre || freshData.genre || prev.genre }));
+          setMetadata(prev => ({ 
+             ...prev, 
+             ...freshData, 
+             genre: track.genre || freshData.genre || prev.genre,
+             bpm: track.bpm || freshData.bpm || prev.bpm,
+             energy: track.energy || freshData.energy || prev.energy
+          }));
           setIsRetrying(false);
           return freshData.previewUrl;
       } else {
