@@ -235,16 +235,30 @@
 
   // Scale the design to whatever size TikTok Studio gives the Link source, as
   // large as fits both ways. Text is re-rendered at that size, so it stays sharp.
-  // A card is designed 900px wide; the all-in-one page 1080x1920.
+  // A card is designed 900px wide; the all-in-one block 1080px wide.
+  // Studio draws a Link source at most ~1080x1032, so at 1080 wide the
+  // all-in-one block (about 800px tall) lands 1:1 on the 1080x1920 canvas.
   function fit() {
     var w = window.innerWidth;
     var h = window.innerHeight;
     if (!w || !h || preview) return;
-    document.body.style.zoom = '1';
+    var body = document.body;
+    body.style.zoom = '1';
     var baseW = which === 'all' ? 1080 : 900;
-    var baseH = which === 'all' ? 1920 : document.body.scrollHeight;
+    var baseH;
+    if (which === 'all') {
+      // cards are absolutely placed, so measure the lowest one
+      body.style.height = 'auto';
+      var bottom = 0;
+      var slots = body.querySelectorAll('.slot');
+      for (var i = 0; i < slots.length; i++) bottom = Math.max(bottom, slots[i].getBoundingClientRect().bottom);
+      baseH = Math.ceil(bottom) + 20;
+      body.style.height = baseH + 'px';
+    } else {
+      baseH = body.scrollHeight;
+    }
     var s = baseH ? Math.min(w / baseW, h / baseH) : w / baseW;
-    document.body.style.zoom = String(s);
+    body.style.zoom = String(s);
   }
   window.addEventListener('resize', fit);
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);

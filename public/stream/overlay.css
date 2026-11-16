@@ -59,10 +59,10 @@ body.single .slot {
   width: 860px;
 }
 
-/* all three cards on the 1080x1920 portrait canvas, like the original overlay */
+/* all three cards at full canvas size (1080 wide) with the original spacing,
+   trimmed top and bottom so it fits TikTok Studio's Link source (max ~1080x1032) */
 body.all {
   width: 1080px;
-  height: 1920px;
   position: relative;
 }
 
@@ -73,14 +73,14 @@ body.all .slot {
 }
 
 body.all .s1 {
-  top: 250px;
+  top: 20px;
 }
 
 /* gap above the stack is left free for the song player */
 body.all .stack {
   position: absolute;
   left: 110px;
-  top: 740px;
+  top: 510px;
   width: 860px;
   display: flex;
   flex-direction: column;
