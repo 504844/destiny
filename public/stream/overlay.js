@@ -232,6 +232,22 @@
   var params = new URLSearchParams(location.search);
   var preview = params.has('preview');
   document.body.classList.add(which === 'all' ? 'all' : 'single');
+
+  // Scale the design to whatever size TikTok Studio gives the Link source, as
+  // large as fits both ways. Text is re-rendered at that size, so it stays sharp.
+  // A card is designed 900px wide; the all-in-one page 1080x1920.
+  function fit() {
+    var w = window.innerWidth;
+    var h = window.innerHeight;
+    if (!w || !h || preview) return;
+    document.body.style.zoom = '1';
+    var baseW = which === 'all' ? 1080 : 900;
+    var baseH = which === 'all' ? 1920 : document.body.scrollHeight;
+    var s = baseH ? Math.min(w / baseW, h / baseH) : w / baseW;
+    document.body.style.zoom = String(s);
+  }
+  window.addEventListener('resize', fit);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
   var root = document.getElementById('root') || document.body;
   var lastJson = null;
 
@@ -246,6 +262,7 @@
     if (json === lastJson) return;
     lastJson = json;
     mount(root, data, which);
+    fit();
     requestAnimationFrame(reportSize);
   }
 
