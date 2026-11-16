@@ -37,13 +37,36 @@
     },
     gig: {
       show: true,
-      date: '2026-11-06',
       label: 'NEXT LIVE GIG',
-      venue: 'Graffitti Underground',
-      city: 'Kaunas',
-      tag: 'TRANCE'
+      labelMany: 'UPCOMING GIGS',
+      items: [
+        { date: '2026-11-06', venue: 'Graffitti Underground', place: '', city: 'Kaunas', tag: 'TRANCE' }
+      ]
     }
   };
+
+  var MAX_GIGS = 3;
+  var DATE_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+  function pad2(n) { return (n < 10 ? '0' : '') + n; }
+
+  // today's date on this computer as YYYY-MM-DD
+  function today() {
+    var d = new Date();
+    return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
+  }
+
+  // a gig counts as past from the day after its date
+  function isPast(date) { return DATE_RE.test(date || '') && date < today(); }
+
+  // gigs still to come, soonest first (gigs without a date go last)
+  function upcoming(items) {
+    var key = function (g) { return g.date || '9999'; };
+    return items
+      .filter(function (g) { return !isPast(g.date) && (g.venue || g.place || g.city || g.date); })
+      .sort(function (a, b) { return key(a) < key(b) ? -1 : key(a) > key(b) ? 1 : 0; })
+      .slice(0, MAX_GIGS);
+  }
 
   var MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
 
@@ -86,7 +109,17 @@
 
     var g = d.gig || {};
     o.gig.show = bool(g.show, true);
-    ['date', 'label', 'venue', 'city', 'tag'].forEach(function (k) { o.gig[k] = str(g[k], o.gig[k]); });
+    o.gig.label = str(g.label, o.gig.label);
+    o.gig.labelMany = str(g.labelMany, o.gig.labelMany);
+    var gigItem = function (i) {
+      i = i || {};
+      return { date: str(i.date, ''), venue: str(i.venue, ''), place: str(i.place, ''), city: str(i.city, ''), tag: str(i.tag, '') };
+    };
+    if (Array.isArray(g.items)) {
+      o.gig.items = g.items.slice(0, MAX_GIGS).map(gigItem);
+    } else if (g.venue !== undefined || g.date !== undefined || g.city !== undefined) {
+      o.gig.items = [gigItem(g)]; // content saved before gigs became a list
+    }
     return o;
   }
 
@@ -167,23 +200,51 @@
     return card;
   }
 
+  function dateTile(date, cls) {
+    var m = DATE_RE.exec(date || '');
+    if (!m) return null;
+    var tile = el('div', cls);
+    tile.append(el('div', 'day', m[3]), el('div', 'mon', MONTHS[parseInt(m[2], 10) - 1] || ''));
+    return tile;
+  }
+
+  function gigMeta(i) { return [i.place, i.city].filter(Boolean).join(' · '); }
+
+  // One gig: the original card. Two or three: a list with the next one highlighted.
   function renderGig(g) {
+    var items = upcoming(g.items);
+    if (!items.length) return null;
     var card = el('div', 'card');
-    card.style.padding = '12px 16px';
-    var ev = el('div', 'ev');
-    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(g.date || '');
-    if (m) {
-      var date = el('div', 'date');
-      date.append(el('div', 'day', m[3]), el('div', 'mon', MONTHS[parseInt(m[2], 10) - 1] || ''));
-      ev.append(date);
+
+    if (items.length === 1) {
+      var i = items[0];
+      card.style.padding = '12px 16px';
+      var ev = el('div', 'ev');
+      var tile = dateTile(i.date, 'date');
+      if (tile) ev.append(tile);
+      var info = el('div');
+      if (g.label) info.append(el('div', 'lab', g.label));
+      if (i.venue) info.append(el('div', 'venue', i.venue));
+      if (gigMeta(i)) info.append(el('div', 'meta', gigMeta(i)));
+      ev.append(info);
+      if (i.tag) ev.append(el('div', 'tag', i.tag));
+      card.append(ev);
+      return card;
     }
-    var info = el('div');
-    if (g.label) info.append(el('div', 'lab', g.label));
-    if (g.venue) info.append(el('div', 'venue', g.venue));
-    if (g.city) info.append(el('div', 'meta', g.city));
-    ev.append(info);
-    if (g.tag) ev.append(el('div', 'tag', g.tag));
-    card.append(ev);
+
+    card.className = 'card gigs';
+    if (g.labelMany) card.append(el('div', 'lab', g.labelMany));
+    items.forEach(function (it, n) {
+      var row = el('div', 'gig-row');
+      var t = dateTile(it.date, n === 0 ? 'date' : 'date dim');
+      if (t) row.append(t);
+      var inf = el('div', 'gig-info');
+      if (it.venue) inf.append(el('div', 'venue', it.venue));
+      if (gigMeta(it)) inf.append(el('div', 'meta', gigMeta(it)));
+      row.append(inf);
+      if (it.tag) row.append(el('div', 'tag', it.tag));
+      card.append(row);
+    });
     return card;
   }
 
@@ -206,7 +267,10 @@
   var builders = {
     prices: function (d) { return d.prices.show ? slot(1, renderPrices(d.prices)) : null; },
     commands: function (d) { return d.commands.show && d.commands.items.length ? slot(2, renderCommands(d.commands)) : null; },
-    gig: function (d) { return d.gig.show ? slot(3, renderGig(d.gig)) : null; }
+    gig: function (d) {
+      var card = d.gig.show ? renderGig(d.gig) : null;
+      return card ? slot(3, card) : null;
+    }
   };
 
   function mount(root, data, which) {
@@ -224,7 +288,7 @@
     }
   }
 
-  window.DJStream = { DEFAULTS: DEFAULTS, normalize: normalize, clone: clone };
+  window.DJStream = { DEFAULTS: DEFAULTS, normalize: normalize, clone: clone, isPast: isPast, MAX_GIGS: MAX_GIGS };
 
   var which = document.body && document.body.getAttribute('data-card');
   if (!which) return; // loaded by the editor only for DEFAULTS/normalize
@@ -267,12 +331,13 @@
 
   function reportSize() {
     if (!preview || window.parent === window) return;
-    window.parent.postMessage({ type: 'dj-stream-size', card: which, h: document.body.scrollHeight }, location.origin);
+    window.parent.postMessage({ type: 'dj-stream-size', card: which, h: root.children.length ? document.body.scrollHeight : 0 }, location.origin);
   }
 
   function show(raw) {
     var data = normalize(raw);
-    var json = JSON.stringify(data);
+    // include the date, so past gigs drop off by themselves during a long stream
+    var json = JSON.stringify(data) + today();
     if (json === lastJson) return;
     lastJson = json;
     mount(root, data, which);

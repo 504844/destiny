@@ -321,6 +321,66 @@ body.all .stack .slot {
   white-space: nowrap;
 }
 
+/* two or three gigs: one card, a row per gig, the next one highlighted */
+.card.gigs {
+  padding: 12px 18px 6px;
+}
+
+.card.gigs > .lab {
+  margin: 0 2px 4px;
+}
+
+.gig-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 0;
+}
+
+.gig-row + .gig-row {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.gig-row .date {
+  min-width: 58px;
+  padding: 5px 10px;
+  border-radius: 12px;
+}
+
+.gig-row .day {
+  font-size: 28px;
+}
+
+.gig-row .mon {
+  font-size: 13px;
+  letter-spacing: 1.5px;
+}
+
+.gig-row .date.dim {
+  background: rgba(255, 255, 255, 0.045);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+  animation: none;
+}
+
+.gig-info {
+  min-width: 0;
+}
+
+.gig-row .venue {
+  font-size: 24px;
+  line-height: 1.1;
+}
+
+.gig-row .meta {
+  font-size: 16px;
+  margin-top: 2px;
+}
+
+.gig-row .tag {
+  font-size: 15px;
+  padding: 3px 12px;
+}
+
 @property --a {
   syntax: '<angle>';
   inherits: false;

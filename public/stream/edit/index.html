@@ -209,6 +209,9 @@
 
     .item.tier { grid-template-columns: 64px 1fr 1fr 80px auto auto; }
     .item.cmd { grid-template-columns: 120px 1fr 1.4fr auto; }
+    .item.gig { grid-template-columns: 150px minmax(0, 1fr) minmax(0, 1fr); }
+    .item.gig .moves { justify-self: end; align-self: end; }
+    .past-note { grid-column: 1 / -1; font-size: 12px; color: var(--warn); }
 
     .item label.f > span { font-size: 11px; }
 
@@ -337,6 +340,8 @@
       .item.cmd { grid-template-columns: 1fr; }
       .item .moves { justify-content: flex-end; align-self: center; }
       .item.cmd .moves { grid-column: 1 / -1; }
+      .item.gig { grid-template-columns: 1fr 1fr; }
+      .item.gig .moves { grid-column: 1 / -1; }
       .link-row { grid-template-columns: 1fr auto; }
       .link-row code { grid-column: 1 / -1; grid-row: 2; }
     }
@@ -386,7 +391,7 @@
               <li>Under <b>Links for TikTok LIVE Studio</b> above, click <b>Copy</b> next to <b>All in one</b>.</li>
               <li>Open TikTok LIVE Studio. On the left, click <b>Add source</b>, then choose <b>Link</b>.</li>
               <li>Click into the <b>Link</b> box and paste (Ctrl+V).</li>
-              <li>Turn on <b>Custom resolution</b>. Type <b>1080</b> in <b>W</b> and <b>800</b> in <b>H</b>. (Added more than 4 commands, so they make a second row? Use <b>900</b> instead.)</li>
+              <li>Turn on <b>Custom resolution</b>. Type <b>1080</b> in <b>W</b> and <b>1000</b> in <b>H</b>.</li>
               <li>Leave <b>Always keep active</b> on. Click <b>Add source</b>.</li>
               <li>Click the overlay on the phone screen so a red box appears around it.</li>
               <li>In the bar above the phone, click the small arrow next to the button with four corner arrows, then click <b>Fit</b>.</li>
@@ -397,11 +402,12 @@
           </div>
 
           <div class="guide-part">
-            <h3>B. Change prices, commands or the next gig <span class="muted">(any time, even during a live)</span></h3>
+            <h3>B. Change prices, commands or gigs <span class="muted">(any time, even during a live)</span></h3>
             <ol>
               <li>Open this page and enter the PIN if it asks. It remembers you on this device.</li>
               <li>Type your changes into the boxes. The preview next to each card shows how it will look.</li>
-              <li>To add or remove a price or command, use <b>+ Add price</b>, <b>+ Add command</b>, or the <b>×</b> on a row. The arrows move a row left or right on the card.</li>
+              <li>To add or remove a price, command or gig, use <b>+ Add price</b>, <b>+ Add command</b>, <b>+ Add gig</b>, or the <b>×</b> on a row. The arrows move a row up or down.</li>
+              <li>Gigs: you can list up to 3. They sort by date, and a gig disappears from the stream by itself the day after it happens, so you never have to delete old ones before going live.</li>
               <li>To hide a card from the stream, turn off <b>Show on stream</b> at the top right of that card.</li>
               <li>Press <b>Save</b> at the top. After about 10 seconds the overlay in TikTok LIVE Studio changes by itself. You don't need to touch Studio.</li>
               <li>Changed your mind before saving? Press <b>Undo changes</b>.</li>
@@ -705,15 +711,39 @@
       }
 
       function gigPanel() {
-        return panel('Next gig', 'gig.show', [
-          el('div', { class: 'grid2' }, [
-            textField('Date', 'gig.date', { type: 'date' }),
-            textField('Small text above', 'gig.label', { upper: true })
+        var g = state.gig;
+        var items = g.items.map(function (it, i) {
+          var base = 'gig.items.' + i;
+          var date = textField('Date', base + '.date', { type: 'date' });
+          var past = el('div', { class: 'past-note', text: 'This date has passed, so this gig is hidden on stream.' });
+          past.hidden = !D.isPast(it.date);
+          date.querySelector('input').addEventListener('input', function (e) { past.hidden = !D.isPast(e.target.value); });
+          return el('div', { class: 'item gig' }, [
+            date,
+            textField('Event or venue name', base + '.venue', { placeholder: 'Bedroom Bangers' }),
+            textField('Venue (optional)', base + '.place', { placeholder: "Youngs'Club" }),
+            textField('City', base + '.city', { placeholder: 'Vilnius' }),
+            textField('Tag (optional)', base + '.tag', { upper: true, placeholder: 'TRANCE' }),
+            moves('gig.items', i, 1),
+            past
+          ]);
+        });
+        var add = el('button', { type: 'button', class: 'btn small', text: '+ Add gig' });
+        add.disabled = g.items.length >= D.MAX_GIGS;
+        add.addEventListener('click', function () {
+          g.items.push({ date: '', venue: '', place: '', city: '', tag: '' });
+          changed(true);
+        });
+        return panel('Gigs', 'gig.show', [
+          el('div', { class: 'group' }, [
+            el('div', { class: 'group-title' }, [el('span', { text: 'Up to 3 gigs. They sort by date, and past ones hide by themselves.' }), add]),
+            el('div', { class: 'list' }, items)
           ]),
-          textField('Venue', 'gig.venue'),
-          el('div', { class: 'grid2' }, [
-            textField('City', 'gig.city'),
-            textField('Tag on the right (optional)', 'gig.tag', { upper: true })
+          el('div', { class: 'sub-box' }, [
+            el('div', { class: 'grid2' }, [
+              textField('Small text above (1 gig)', 'gig.label', { upper: true }),
+              textField('Small text above (2 or 3 gigs)', 'gig.labelMany', { upper: true })
+            ])
           ])
         ], 'gig');
       }
@@ -808,7 +838,7 @@
       var LINKS = [
         { card: 'prices', name: 'Prices' },
         { card: 'commands', name: 'Chat commands' },
-        { card: 'gig', name: 'Next gig' },
+        { card: 'gig', name: 'Gigs' },
         { card: 'all', name: 'All in one' }
       ];
 
