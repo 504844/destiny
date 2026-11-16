@@ -9,14 +9,16 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "lucide-react": "^0.563.0",
-    "clsx": "^2.1.1",
-    "react-dom": "^19.2.4",
-    "react": "^19.2.4",
+    "@phosphor-icons/react": "2.0.15",
     "@supabase/supabase-js": "^2.93.3",
-    "tailwind-merge": "^3.4.0",
+    "@vercel/blob": "^2.9.0",
+    "@vercel/functions": "^3.11.3",
+    "clsx": "^2.1.1",
     "fast-average-color": "9.4.0",
-    "@phosphor-icons/react": "2.0.15"
+    "lucide-react": "^0.563.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "tailwind-merge": "^3.4.0"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Stream overlays · DJ Destiny</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f5f6f8;
+      --panel: #ffffff;
+      --sub: #f8f9fa;
+      --line: #e1e4e8;
+      --line-strong: #cfd4da;
+      --text: #1c1f24;
+      --muted: #626a75;
+      --accent: #2f6bd8;
+      --accent-hover: #2559b8;
+      --on-accent: #ffffff;
+      --field: #ffffff;
+      --ok: #1d7f46;
+      --warn: #a5660f;
+      --err: #c0392b;
+      --focus: rgba(47, 107, 216, 0.35);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #111316;
+        --panel: #191c20;
+        --sub: #1e2126;
+        --line: #2b2f35;
+        --line-strong: #3a3f46;
+        --text: #e5e7ea;
+        --muted: #99a0aa;
+        --accent: #5a8bea;
+        --accent-hover: #6f9bf0;
+        --on-accent: #0d1117;
+        --field: #121418;
+        --ok: #4cb87a;
+        --warn: #d6a24a;
+        --err: #ef6b5e;
+        --focus: rgba(90, 139, 234, 0.4);
+      }
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font: 14px/1.45 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+
+    h1 { font-size: 20px; font-weight: 600; margin: 0; }
+    h2 { font-size: 16px; font-weight: 600; margin: 0; }
+    p { margin: 0; }
+    .muted { color: var(--muted); }
+
+    button, input, select { font: inherit; color: inherit; }
+
+    input[type=text], input[type=date], input[type=password], input[type=number] {
+      width: 100%;
+      height: 34px;
+      padding: 0 10px;
+      background: var(--field);
+      border: 1px solid var(--line-strong);
+      border-radius: 6px;
+      min-width: 0;
+    }
+
+    input:focus-visible, button:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 3px var(--focus);
+      border-color: var(--accent);
+    }
+
+    .btn {
+      height: 34px;
+      padding: 0 14px;
+      border-radius: 6px;
+      border: 1px solid var(--line-strong);
+      background: var(--panel);
+      cursor: pointer;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    .btn:hover { background: var(--sub); }
+    .btn:disabled { opacity: 0.5; cursor: default; }
+
+    .btn.primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: var(--on-accent);
+    }
+
+    .btn.primary:hover:not(:disabled) { background: var(--accent-hover); }
+
+    .btn.small { height: 28px; padding: 0 10px; font-size: 13px; }
+
+    .icon-btn {
+      width: 30px;
+      height: 30px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--panel);
+      cursor: pointer;
+      color: var(--muted);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+    }
+
+    .icon-btn:hover:not(:disabled) { color: var(--text); background: var(--sub); }
+    .icon-btn:disabled { opacity: 0.35; cursor: default; }
+    .icon-btn svg { width: 14px; height: 14px; }
+
+    /* top bar */
+    .bar {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: var(--panel);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .bar-in {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .bar-in h1 { margin-right: auto; }
+
+    .status { font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+    .status::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--line-strong); }
+    .status.dirty { color: var(--warn); }
+    .status.dirty::before { background: var(--warn); }
+    .status.ok { color: var(--ok); }
+    .status.ok::before { background: var(--ok); }
+    .status.err { color: var(--err); }
+    .status.err::before { background: var(--err); }
+
+    main {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 20px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .intro { color: var(--muted); max-width: 70ch; }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+
+    .panel-head {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .panel-head h2 { margin-right: auto; }
+
+    .panel-body {
+      padding: 16px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 440px;
+      gap: 20px;
+      align-items: start;
+    }
+
+    .panel.off .fields { opacity: 0.5; }
+
+    .fields { display: grid; gap: 14px; }
+
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+
+    label.f { display: grid; gap: 4px; }
+    label.f > span, .group-title { font-size: 12px; font-weight: 500; color: var(--muted); }
+
+    .group { display: grid; gap: 8px; }
+    .group-title { display: flex; align-items: center; justify-content: space-between; }
+
+    .list { display: grid; gap: 8px; }
+
+    .item {
+      display: grid;
+      gap: 8px;
+      align-items: end;
+      padding: 10px;
+      background: var(--sub);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+    }
+
+    .item.tier { grid-template-columns: 64px 1fr 1fr 80px auto auto; }
+    .item.cmd { grid-template-columns: 120px 1fr 1.4fr auto; }
+
+    .item label.f > span { font-size: 11px; }
+
+    .moves { display: flex; gap: 4px; }
+
+    .check {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      height: 34px;
+      cursor: pointer;
+      user-select: none;
+      white-space: nowrap;
+    }
+
+    .check input { width: 16px; height: 16px; margin: 0; accent-color: var(--accent); }
+
+    /* on/off switch in panel headers */
+    .switch { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; color: var(--muted); user-select: none; }
+    .switch input { position: absolute; opacity: 0; pointer-events: none; }
+    .switch .track { width: 34px; height: 20px; border-radius: 10px; background: var(--line-strong); position: relative; transition: background .15s; }
+    .switch .track::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: transform .15s; }
+    .switch input:checked + .track { background: var(--accent); }
+    .switch input:checked + .track::after { transform: translateX(14px); }
+    .switch input:focus-visible + .track { box-shadow: 0 0 0 3px var(--focus); }
+
+    .sub-box { border-top: 1px solid var(--line); padding-top: 14px; display: grid; gap: 10px; }
+
+    /* preview */
+    .preview { position: sticky; top: 70px; display: grid; gap: 6px; }
+    .preview-label { font-size: 12px; color: var(--muted); display: flex; justify-content: space-between; }
+
+    .stage {
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      overflow: hidden;
+      background-color: #16181c;
+      background-image:
+        linear-gradient(45deg, #1d2025 25%, transparent 25%),
+        linear-gradient(-45deg, #1d2025 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #1d2025 75%),
+        linear-gradient(-45deg, transparent 75%, #1d2025 75%);
+      background-size: 16px 16px;
+      background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+      position: relative;
+      min-height: 60px;
+    }
+
+    .stage iframe {
+      border: 0;
+      width: 900px;
+      transform-origin: top left;
+      display: block;
+      background: transparent;
+    }
+
+    .stage .hidden-note {
+      position: absolute;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      color: #9aa0a8;
+      font-size: 13px;
+    }
+
+    .stage.empty .hidden-note { display: flex; }
+
+    /* links */
+    .links { display: grid; }
+    .link-row {
+      display: grid;
+      grid-template-columns: 130px minmax(0, 1fr) 110px auto;
+      gap: 12px;
+      align-items: center;
+      padding: 10px 16px;
+      border-top: 1px solid var(--line);
+    }
+    .link-row:first-child { border-top: 0; }
+    .link-row code {
+      font: 13px ui-monospace, SFMono-Regular, Consolas, monospace;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .link-row .size { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+    .link-name { font-weight: 500; }
+
+    .steps { padding: 12px 16px; border-top: 1px solid var(--line); color: var(--muted); display: grid; gap: 4px; }
+    .steps ol { margin: 0; padding-left: 18px; display: grid; gap: 2px; }
+
+    .color-row { display: flex; gap: 8px; align-items: center; }
+    .color-row input[type=color] { width: 44px; height: 34px; padding: 2px; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--field); cursor: pointer; }
+    .color-row input[type=text] { width: 110px; }
+
+    /* lock screen */
+    .lock { min-height: 100vh; display: grid; place-items: center; padding: 20px; }
+    .lock form { width: 100%; max-width: 340px; display: grid; gap: 12px; padding: 24px; }
+    .lock .err { color: var(--err); font-size: 13px; min-height: 18px; }
+
+    [hidden] { display: none !important; }
+
+    @media (max-width: 980px) {
+      .panel-body { grid-template-columns: minmax(0, 1fr); }
+      .preview { position: static; order: -1; }
+    }
+
+    @media (max-width: 640px) {
+      .bar-in { flex-wrap: wrap; padding: 10px 14px; }
+      .bar-in h1 { font-size: 17px; width: 100%; }
+      .status { margin-right: auto; }
+      main { padding: 14px; }
+      .grid2, .grid3 { grid-template-columns: 1fr; }
+      .item.tier { grid-template-columns: 1fr 1fr; }
+      .item.cmd { grid-template-columns: 1fr; }
+      .item .moves { grid-column: 1 / -1; justify-content: flex-end; }
+      .link-row { grid-template-columns: 1fr auto; }
+      .link-row code { grid-column: 1 / -1; grid-row: 2; }
+      .link-row .size { grid-column: 1 / -1; grid-row: 3; }
+    }
+  </style>
+</head>
+<body>
+  <!-- PIN screen -->
+  <div class="lock" id="lock" hidden>
+    <form class="panel" id="lockForm" autocomplete="off">
+      <h1>Stream overlays</h1>
+      <p class="muted">Enter the PIN to edit the overlays.</p>
+      <label class="f"><span>PIN</span><input type="password" id="pin" autocomplete="current-password" required></label>
+      <div class="err" id="lockErr" role="alert"></div>
+      <button class="btn primary" type="submit" id="unlockBtn">Unlock</button>
+    </form>
+  </div>
+
+  <!-- Editor -->
+  <div id="app" hidden>
+    <header class="bar">
+      <div class="bar-in">
+        <h1>Stream overlays</h1>
+        <span class="status" id="status" role="status">Loading…</span>
+        <button class="btn" id="discardBtn" type="button" disabled>Undo changes</button>
+        <button class="btn primary" id="saveBtn" type="button" disabled>Save</button>
+      </div>
+    </header>
+
+    <main id="main">
+      <p class="intro">Change anything below and check the preview next to it. Press <b>Save</b> when you're happy. The overlays in TikTok LIVE Studio update on their own within a few seconds, so you don't need to touch Studio.</p>
+      <div id="sections"></div>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Links for TikTok LIVE Studio</h2></div>
+        <div class="links" id="links"></div>
+        <div class="steps">
+          <ol>
+            <li>In TikTok LIVE Studio, click <b>Add source</b> and choose <b>Link</b>.</li>
+            <li>Paste one of the links above. Set the width and height to the size shown next to it.</li>
+            <li>Drag and resize the card where you want it on the screen. Add one Link source per card.</li>
+          </ol>
+        </div>
+      </section>
+
+      <p class="muted" style="font-size:13px">
+        <a href="#" id="logout" style="color:inherit">Forget PIN on this device</a>
+      </p>
+    </main>
+  </div>
+
+  <script src="/stream/overlay.js"></script>
+  <script>
+    (function () {
+      'use strict';
+      var D = window.DJStream;
+      var PIN_KEY = 'dj-stream-pin';
+      var ORIGIN = location.origin;
+
+      var state = null;      // what's on screen
+      var savedJson = null;  // last saved version
+      var pin = localStorage.getItem(PIN_KEY) || '';
+      var frames = {};       // card -> { iframe, stage, ready, h }
+      var previewTimer = null;
+
+      var $ = function (id) { return document.getElementById(id); };
+
+      var ICONS = {
+        up: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10l4-4 4 4"/></svg>',
+        down: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l4 4 4-4"/></svg>',
+        remove: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"/></svg>'
+      };
+
+      // ---------- API ----------
+      function api(body) {
+        return fetch('/api/stream', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        }).then(function (r) {
+          return r.json().catch(function () { return {}; }).then(function (j) { j.status = r.status; return j; });
+        });
+      }
+
+      // ---------- PIN ----------
+      function showLock(msg) {
+        $('app').hidden = true;
+        $('lock').hidden = false;
+        $('lockErr').textContent = msg || '';
+        $('pin').value = '';
+        $('pin').focus();
+      }
+
+      $('lockForm').addEventListener('submit', function (e) {
+        e.preventDefault();
+        var p = $('pin').value.trim();
+        if (!p) return;
+        $('unlockBtn').disabled = true;
+        $('lockErr').textContent = '';
+        api({ pin: p, check: true }).then(function (j) {
+          $('unlockBtn').disabled = false;
+          if (j.ok) {
+            pin = p;
+            localStorage.setItem(PIN_KEY, p);
+            start();
+          } else {
+            $('lockErr').textContent = j.status === 401 ? 'That PIN is not right.' : 'Could not check the PIN. Try again.';
+          }
+        }).catch(function () {
+          $('unlockBtn').disabled = false;
+          $('lockErr').textContent = 'No connection. Try again.';
+        });
+      });
+
+      $('logout').addEventListener('click', function (e) {
+        e.preventDefault();
+        localStorage.removeItem(PIN_KEY);
+        pin = '';
+        showLock();
+      });
+
+      // ---------- state helpers ----------
+      function getPath(obj, path) {
+        return path.split('.').reduce(function (o, k) { return o == null ? o : o[k]; }, obj);
+      }
+      function setPath(obj, path, value) {
+        var keys = path.split('.');
+        var last = keys.pop();
+        var target = keys.reduce(function (o, k) { return o[k]; }, obj);
+        target[last] = value;
+      }
+
+      function isDirty() { return JSON.stringify(state) !== savedJson; }
+
+      function setStatus(text, kind) {
+        var s = $('status');
+        s.textContent = text;
+        s.className = 'status' + (kind ? ' ' + kind : '');
+      }
+
+      function changed(structural) {
+        var dirty = isDirty();
+        $('saveBtn').disabled = !dirty;
+        $('discardBtn').disabled = !dirty;
+        setStatus(dirty ? 'Unsaved changes' : 'All changes saved', dirty ? 'dirty' : '');
+        if (structural) renderSections();
+        schedulePreview();
+      }
+
+      // ---------- form building ----------
+      function el(tag, attrs, children) {
+        var e = document.createElement(tag);
+        if (attrs) Object.keys(attrs).forEach(function (k) {
+          if (k === 'class') e.className = attrs[k];
+          else if (k === 'text') e.textContent = attrs[k];
+          else if (k === 'html') e.innerHTML = attrs[k];
+          else e.setAttribute(k, attrs[k]);
+        });
+        (children || []).forEach(function (c) { if (c) e.append(c); });
+        return e;
+      }
+
+      function textField(label, path, opts) {
+        opts = opts || {};
+        var input = el('input', { type: opts.type || 'text' });
+        if (opts.placeholder) input.placeholder = opts.placeholder;
+        if (opts.inputmode) input.setAttribute('inputmode', opts.inputmode);
+        input.value = getPath(state, path) || '';
+        input.addEventListener('input', function () {
+          var v = input.value;
+          if (opts.upper) {
+            var pos = input.selectionStart;
+            v = v.toUpperCase();
+            input.value = v;
+            input.setSelectionRange(pos, pos);
+          }
+          setPath(state, path, v);
+          changed(false);
+        });
+        return el('label', { class: 'f' }, [el('span', { text: label }), input]);
+      }
+
+      function checkField(label, path, structural) {
+        var input = el('input', { type: 'checkbox' });
+        input.checked = !!getPath(state, path);
+        input.addEventListener('change', function () {
+          setPath(state, path, input.checked);
+          changed(structural);
+        });
+        return el('label', { class: 'check' }, [input, document.createTextNode(label)]);
+      }
+
+      function switchField(path) {
+        var input = el('input', { type: 'checkbox' });
+        input.checked = !!getPath(state, path);
+        input.addEventListener('change', function () {
+          setPath(state, path, input.checked);
+          changed(true);
+        });
+        return el('label', { class: 'switch' }, [
+          document.createTextNode('Show on stream'), input, el('span', { class: 'track' })
+        ]);
+      }
+
+      function iconBtn(kind, label, onClick, disabled) {
+        var b = el('button', { type: 'button', class: 'icon-btn', 'aria-label': label, title: label, html: ICONS[kind] });
+        if (disabled) b.disabled = true;
+        b.addEventListener('click', onClick);
+        return b;
+      }
+
+      function moves(listPath, i, min) {
+        var list = getPath(state, listPath);
+        return el('div', { class: 'moves' }, [
+          iconBtn('up', 'Move up', function () { swap(list, i, i - 1); }, i === 0),
+          iconBtn('down', 'Move down', function () { swap(list, i, i + 1); }, i === list.length - 1),
+          iconBtn('remove', 'Remove', function () { list.splice(i, 1); changed(true); }, list.length <= (min || 0))
+        ]);
+      }
+
+      function swap(list, a, b) {
+        var t = list[a]; list[a] = list[b]; list[b] = t;
+        changed(true);
+      }
+
+      function previewBox(card, label) {
+        var f = frames[card];
+        if (!f) {
+          var iframe = el('iframe', { src: '/stream/' + card + '/?preview', title: label + ' preview', loading: 'eager', tabindex: '-1' });
+          var stage = el('div', { class: 'stage' }, [iframe, el('div', { class: 'hidden-note', text: 'Hidden on stream' })]);
+          f = frames[card] = { iframe: iframe, stage: stage, ready: false, h: 0 };
+        }
+        return el('div', { class: 'preview' }, [
+          el('div', { class: 'preview-label' }, [el('span', { text: 'Preview' })]),
+          f.stage
+        ]);
+      }
+
+      function panel(title, showPath, fields, card) {
+        var on = getPath(state, showPath);
+        return el('section', { class: 'panel' + (on ? '' : ' off') }, [
+          el('div', { class: 'panel-head' }, [el('h2', { text: title }), switchField(showPath)]),
+          el('div', { class: 'panel-body' }, [el('div', { class: 'fields' }, fields), previewBox(card, title)])
+        ]);
+      }
+
+      function pricesPanel() {
+        var p = state.prices;
+        var tiers = p.tiers.map(function (t, i) {
+          var base = 'prices.tiers.' + i;
+          return el('div', { class: 'item tier' }, [
+            textField('Amount', base + '.n', { inputmode: 'numeric' }),
+            textField('Word', base + '.label', { placeholder: 'songs' }),
+            textField('Coins', base + '.coins', { inputmode: 'numeric' }),
+            textField('Price', base + '.price', { inputmode: 'decimal' }),
+            checkField('Highlight', base + '.best', false),
+            moves('prices.tiers', i, 0)
+          ]);
+        });
+        var addTier = el('button', { type: 'button', class: 'btn small', text: '+ Add price' });
+        addTier.disabled = p.tiers.length >= 6;
+        addTier.addEventListener('click', function () {
+          p.tiers.push({ n: '', label: 'songs', coins: '', price: '', best: false });
+          changed(true);
+        });
+
+        var extraOn = p.extra.show;
+        var extra = el('div', { class: 'sub-box' }, [
+          el('div', { class: 'group-title' }, [el('span', { text: 'Extra item (bottom left)' }), checkField('Show', 'prices.extra.show', true)]),
+          extraOn ? el('div', { class: 'grid2' }, [
+            textField('Name', 'prices.extra.name', { upper: true }),
+            textField('Note', 'prices.extra.note', { placeholder: '~1.5 min' })
+          ]) : null,
+          extraOn ? el('div', { class: 'grid2' }, [
+            textField('Coins', 'prices.extra.coins', { inputmode: 'numeric' }),
+            textField('Price', 'prices.extra.price', { inputmode: 'decimal' })
+          ]) : null
+        ]);
+
+        return panel('Prices', 'prices.show', [
+          el('div', { class: 'grid2' }, [
+            textField('Title', 'prices.title', { upper: true }),
+            textField('Top right text', 'prices.unit')
+          ]),
+          el('div', { class: 'grid2' }, [
+            textField('Coin word', 'prices.coinWord', { placeholder: 'coins' }),
+            textField('Money sign', 'prices.currency', { placeholder: 'E or €' })
+          ]),
+          el('div', { class: 'group' }, [
+            el('div', { class: 'group-title' }, [el('span', { text: 'Prices (left to right)' }), addTier]),
+            el('div', { class: 'list' }, tiers)
+          ]),
+          extra,
+          el('div', { class: 'sub-box' }, [
+            el('div', { class: 'group-title' }, [el('span', { text: 'Bottom right text' })]),
+            el('div', { class: 'grid2' }, [
+              textField('Text', 'prices.footer'),
+              textField('Bold part', 'prices.footerBold')
+            ])
+          ])
+        ], 'prices');
+      }
+
+      function commandsPanel() {
+        var c = state.commands;
+        var items = c.items.map(function (it, i) {
+          var base = 'commands.items.' + i;
+          return el('div', { class: 'item cmd' }, [
+            textField('Command', base + '.cmd', { placeholder: '!play' }),
+            textField('Hint (optional)', base + '.hint', { placeholder: '[song - artist]' }),
+            textField('What it does', base + '.desc'),
+            moves('commands.items', i, 1)
+          ]);
+        });
+        var add = el('button', { type: 'button', class: 'btn small', text: '+ Add command' });
+        add.disabled = c.items.length >= 8;
+        add.addEventListener('click', function () {
+          c.items.push({ cmd: '!', hint: '', desc: '' });
+          changed(true);
+        });
+        return panel('Chat commands', 'commands.show', [
+          el('div', { class: 'group' }, [
+            el('div', { class: 'group-title' }, [el('span', { text: 'Commands (4 per row)' }), add]),
+            el('div', { class: 'list' }, items)
+          ])
+        ], 'commands');
+      }
+
+      function gigPanel() {
+        return panel('Next gig', 'gig.show', [
+          el('div', { class: 'grid2' }, [
+            textField('Date', 'gig.date', { type: 'date' }),
+            textField('Small text above', 'gig.label', { upper: true })
+          ]),
+          textField('Venue', 'gig.venue'),
+          el('div', { class: 'grid2' }, [
+            textField('City', 'gig.city'),
+            textField('Tag on the right (optional)', 'gig.tag', { upper: true })
+          ])
+        ], 'gig');
+      }
+
+      function lookPanel() {
+        var color = el('input', { type: 'color', 'aria-label': 'Accent color' });
+        var hex = el('input', { type: 'text', 'aria-label': 'Color code', maxlength: '7' });
+        color.value = hex.value = state.accent;
+        color.addEventListener('input', function () {
+          hex.value = color.value;
+          state.accent = color.value;
+          changed(false);
+        });
+        hex.addEventListener('input', function () {
+          var v = hex.value.trim();
+          if (v && v[0] !== '#') v = '#' + v;
+          if (/^#[0-9a-f]{6}$/i.test(v)) {
+            color.value = v.toLowerCase();
+            state.accent = v.toLowerCase();
+            changed(false);
+          }
+        });
+        var reset = el('button', { type: 'button', class: 'btn small', text: 'Original color' });
+        reset.addEventListener('click', function () {
+          state.accent = D.DEFAULTS.accent;
+          changed(true);
+        });
+        return el('section', { class: 'panel' }, [
+          el('div', { class: 'panel-head' }, [el('h2', { text: 'Color' })]),
+          el('div', { style: 'padding:16px;display:grid;gap:6px' }, [
+            el('span', { class: 'group-title', text: 'Main color of all cards' }),
+            el('div', { class: 'color-row' }, [color, hex, reset])
+          ])
+        ]);
+      }
+
+      function renderSections() {
+        // keep the scroll position when the form is rebuilt
+        var scrollY = window.scrollY;
+        var box = $('sections');
+        box.textContent = '';
+        box.style.display = 'grid';
+        box.style.gap = '16px';
+        box.append(pricesPanel(), commandsPanel(), gigPanel(), lookPanel());
+        window.scrollTo(0, scrollY);
+        Object.keys(frames).forEach(fitFrame);
+      }
+
+      // ---------- preview ----------
+      function schedulePreview() {
+        clearTimeout(previewTimer);
+        previewTimer = setTimeout(sendPreview, 60);
+      }
+
+      function sendPreview() {
+        Object.keys(frames).forEach(function (card) {
+          var f = frames[card];
+          if (f.ready && f.iframe.contentWindow) {
+            f.iframe.contentWindow.postMessage({ type: 'dj-stream-preview', data: state }, ORIGIN);
+          }
+        });
+      }
+
+      function fitFrame(card) {
+        var f = frames[card];
+        if (!f) return;
+        var w = f.stage.clientWidth || 440;
+        var scale = w / 900;
+        var h = f.h || 0;
+        f.iframe.style.height = Math.max(h, 1) + 'px';
+        f.iframe.style.transform = 'scale(' + scale + ')';
+        f.stage.style.height = Math.max(Math.ceil(h * scale), 60) + 'px';
+        f.stage.classList.toggle('empty', h === 0);
+      }
+
+      window.addEventListener('message', function (e) {
+        if (e.origin !== ORIGIN || !e.data) return;
+        var f = frames[e.data.card];
+        if (!f) return;
+        if (e.data.type === 'dj-stream-ready') {
+          f.ready = true;
+          sendPreview();
+        } else if (e.data.type === 'dj-stream-size') {
+          f.h = e.data.h;
+          fitFrame(e.data.card);
+          renderLinks();
+        }
+      });
+
+      window.addEventListener('resize', function () { Object.keys(frames).forEach(fitFrame); });
+
+      // ---------- links ----------
+      var LINKS = [
+        { card: 'prices', name: 'Prices' },
+        { card: 'commands', name: 'Chat commands' },
+        { card: 'gig', name: 'Next gig' },
+        { card: 'all', name: 'All in one', size: '1080 × 1920' }
+      ];
+
+      function renderLinks() {
+        var box = $('links');
+        box.textContent = '';
+        LINKS.forEach(function (l) {
+          var url = ORIGIN + '/stream/' + l.card + '/';
+          var size = l.size || (frames[l.card] && frames[l.card].h ? '900 × ' + frames[l.card].h : '900 wide');
+          var copy = el('button', { type: 'button', class: 'btn small', text: 'Copy' });
+          copy.addEventListener('click', function () {
+            navigator.clipboard.writeText(url).then(function () {
+              copy.textContent = 'Copied';
+              setTimeout(function () { copy.textContent = 'Copy'; }, 1500);
+            });
+          });
+          box.append(el('div', { class: 'link-row' }, [
+            el('span', { class: 'link-name', text: l.name }),
+            el('code', { text: url, title: url }),
+            el('span', { class: 'size', text: size }),
+            copy
+          ]));
+        });
+      }
+
+      // ---------- save ----------
+      function save() {
+        if (!isDirty()) return;
+        $('saveBtn').disabled = true;
+        setStatus('Saving…', '');
+        var snapshot = JSON.stringify(state);
+        api({ pin: pin, data: JSON.parse(snapshot) }).then(function (j) {
+          if (j.ok) {
+            savedJson = snapshot;
+            changed(false);
+            if (!isDirty()) setStatus('Saved. Live on stream in a few seconds', 'ok');
+          } else if (j.status === 401) {
+            localStorage.removeItem(PIN_KEY);
+            setStatus('PIN not accepted', 'err');
+            $('saveBtn').disabled = false;
+            showLockKeepingState();
+          } else {
+            setStatus('Could not save: ' + (j.error || 'try again'), 'err');
+            $('saveBtn').disabled = false;
+          }
+        }).catch(function () {
+          setStatus('Could not save: no connection', 'err');
+          $('saveBtn').disabled = false;
+        });
+      }
+
+      // PIN changed while editing: ask again without losing the edits
+      function showLockKeepingState() {
+        $('app').hidden = true;
+        $('lock').hidden = false;
+        $('lockErr').textContent = 'The PIN has changed. Enter the new one, your edits are kept.';
+        $('pin').focus();
+      }
+
+      $('saveBtn').addEventListener('click', save);
+      $('discardBtn').addEventListener('click', function () {
+        state = JSON.parse(savedJson);
+        changed(true);
+      });
+      document.addEventListener('keydown', function (e) {
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); save(); }
+      });
+      window.addEventListener('beforeunload', function (e) {
+        if (state && isDirty()) { e.preventDefault(); e.returnValue = ''; }
+      });
+
+      // ---------- start ----------
+      function start() {
+        $('lock').hidden = true;
+        $('app').hidden = false;
+        if (state) { changed(true); return; } // came back from the PIN screen with edits
+        setStatus('Loading…', '');
+        fetch('/api/stream?fresh=1', { cache: 'no-store' })
+          .then(function (r) { if (!r.ok) throw new Error(); return r.json(); })
+          .then(function (j) { return j.data; })
+          .catch(function () { return undefined; })
+          .then(function (data) {
+            state = D.normalize(data || null);
+            savedJson = data ? JSON.stringify(state) : null;
+            renderSections();
+            renderLinks();
+            changed(false);
+            if (data === undefined) setStatus('Could not load saved content. Showing defaults', 'err');
+            else if (!data) setStatus('Not saved yet. Press Save to go live', 'dirty');
+          });
+      }
+
+      if (pin) start(); else showLock();
+    })();
+  </script>
+</body>
+</html>
