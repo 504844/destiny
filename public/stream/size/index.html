@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="robots" content="noindex">
+  <title>Link source size test</title>
+  <style>
+    html, body { margin: 0; height: 100%; overflow: hidden; background: transparent; }
+    body {
+      font: 600 6vmin/1.3 system-ui, sans-serif;
+      color: #fff;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      /* outline of the whole page, so you can see where it ends */
+      box-shadow: inset 0 0 0 6px #2ee6dc;
+      box-sizing: border-box;
+    }
+    .box { background: rgba(0, 0, 0, 0.7); padding: 4vmin 6vmin; border-radius: 3vmin; }
+    .big { font-size: 12vmin; color: #2ee6dc; }
+    .small { font-size: 3.5vmin; font-weight: 400; opacity: .8; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <div class="small">This link is drawn at</div>
+    <div class="big" id="size"></div>
+    <div class="small" id="extra"></div>
+  </div>
+  <script>
+    function show() {
+      document.getElementById('size').textContent = innerWidth + ' × ' + innerHeight;
+      document.getElementById('extra').textContent = 'pixel ratio ' + (window.devicePixelRatio || 1);
+    }
+    show();
+    addEventListener('resize', show);
+  </script>
+</body>
+</html>
