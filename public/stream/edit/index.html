@@ -304,6 +304,13 @@
     .steps { padding: 12px 16px; border-top: 1px solid var(--line); color: var(--muted); display: grid; gap: 4px; }
     .steps ol { margin: 0; padding-left: 18px; display: grid; gap: 2px; }
 
+    .guide-body { display: grid; }
+    .guide-part { padding: 14px 16px; border-top: 1px solid var(--line); display: grid; gap: 8px; }
+    .guide-part:first-child { border-top: 0; }
+    .guide h3 { font-size: 14px; font-weight: 600; margin: 0; }
+    .guide h3 .muted { font-weight: 400; }
+    .guide ol, .guide ul { margin: 0; padding-left: 20px; display: grid; gap: 5px; max-width: 80ch; }
+
     .color-row { display: flex; gap: 8px; align-items: center; }
     .color-row input[type=color] { width: 44px; height: 34px; padding: 2px; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--field); cursor: pointer; }
     .color-row input[type=text] { width: 110px; }
@@ -366,12 +373,51 @@
         <div class="panel-head"><h2>Links for TikTok LIVE Studio</h2></div>
         <div class="links" id="links"></div>
         <div class="steps">
-          <ol>
-            <li>In TikTok LIVE Studio, click <b>Add source</b> and choose <b>Link</b>, and paste the <b>All in one</b> link.</li>
-            <li>Turn on <b>Custom resolution</b> and type <b>W 1080</b>, <b>H 1000</b>. Click <b>Add source</b>.</li>
-            <li>Click <b>Fit</b> (the button with four arrows above the phone). Then drag the box up or down only, to place the cards. Don't resize it, so it stays sharp.</li>
-            <li>To place cards one by one instead, add each single-card link the same way.</li>
-          </ol>
+          <p>Use the <b>All in one</b> link. See <b>How to use</b> below for the steps.</p>
+        </div>
+      </section>
+
+      <section class="panel guide">
+        <div class="panel-head"><h2>How to use</h2></div>
+        <div class="guide-body">
+          <div class="guide-part">
+            <h3>A. Put the overlay into TikTok LIVE Studio <span class="muted">(only once)</span></h3>
+            <ol>
+              <li>Under <b>Links for TikTok LIVE Studio</b> above, click <b>Copy</b> next to <b>All in one</b>.</li>
+              <li>Open TikTok LIVE Studio. On the left, click <b>Add source</b>, then choose <b>Link</b>.</li>
+              <li>Click into the <b>Link</b> box and paste (Ctrl+V).</li>
+              <li>Turn on <b>Custom resolution</b>. Type <b>1080</b> in <b>W</b> and <b>1000</b> in <b>H</b>.</li>
+              <li>Leave <b>Always keep active</b> on. Click <b>Add source</b>.</li>
+              <li>Click the overlay on the phone screen so a red box appears around it.</li>
+              <li>In the bar above the phone, click the small arrow next to the button with four corner arrows, then click <b>Fit</b>.</li>
+              <li>Drag the overlay <b>up</b> until the number above it shows about <b>230 px</b>. Now the cards are in the right place, with the gap for the song player.</li>
+              <li><b>Don't pull the corners</b> to make it bigger or smaller, or it gets blurry. Only move it.</li>
+            </ol>
+            <p class="muted">The empty part under the cards is see-through, so it's fine if it covers your camera.</p>
+          </div>
+
+          <div class="guide-part">
+            <h3>B. Change prices, commands or the next gig <span class="muted">(any time, even during a live)</span></h3>
+            <ol>
+              <li>Open this page and enter the PIN if it asks. It remembers you on this device.</li>
+              <li>Type your changes into the boxes. The preview next to each card shows how it will look.</li>
+              <li>To add or remove a price or command, use <b>+ Add price</b>, <b>+ Add command</b>, or the <b>×</b> on a row. The arrows move a row left or right on the card.</li>
+              <li>To hide a card from the stream, turn off <b>Show on stream</b> at the top right of that card.</li>
+              <li>Press <b>Save</b> at the top. After about 10 seconds the overlay in TikTok LIVE Studio changes by itself. You don't need to touch Studio.</li>
+              <li>Changed your mind before saving? Press <b>Undo changes</b>.</li>
+            </ol>
+          </div>
+
+          <div class="guide-part">
+            <h3>C. If something looks wrong</h3>
+            <ul>
+              <li><b>Overlay didn't change after Save:</b> wait 10 seconds. Still old? In Studio, click the overlay, then click the round arrow (refresh) in the bar above the phone.</li>
+              <li><b>Overlay is blurry:</b> it was resized. Do steps 7 and 8 from part A again.</li>
+              <li><b>A card is missing:</b> check that <b>Show on stream</b> is on for that card here, then press Save.</li>
+              <li><b>It says the PIN is wrong:</b> ask the person who set this up for the new PIN. Your typed changes stay on the screen while you enter it.</li>
+              <li><b>Red "Could not save" at the top:</b> check your internet and press Save again.</li>
+            </ul>
+          </div>
         </div>
       </section>
 
