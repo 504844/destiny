@@ -238,7 +238,7 @@
     .sub-box { border-top: 1px solid var(--line); padding-top: 14px; display: grid; gap: 10px; }
 
     /* preview */
-    .preview { position: sticky; top: 70px; display: grid; gap: 6px; }
+    .preview { position: sticky; top: 70px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; min-width: 0; }
     .preview-label { font-size: 12px; color: var(--muted); display: flex; justify-content: space-between; }
 
     .stage {
@@ -258,11 +258,16 @@
     }
 
     .stage iframe {
+      position: absolute;
+      top: 0;
+      left: 0;
       border: 0;
       width: 900px;
       transform-origin: top left;
       display: block;
       background: transparent;
+      /* must match the overlay page, or Chrome paints the frame white in dark mode */
+      color-scheme: light;
     }
 
     .stage .hidden-note {
@@ -324,7 +329,8 @@
       .grid2, .grid3 { grid-template-columns: 1fr; }
       .item.tier { grid-template-columns: 1fr 1fr; }
       .item.cmd { grid-template-columns: 1fr; }
-      .item .moves { grid-column: 1 / -1; justify-content: flex-end; }
+      .item .moves { justify-content: flex-end; align-self: center; }
+      .item.cmd .moves { grid-column: 1 / -1; }
       .link-row { grid-template-columns: 1fr auto; }
       .link-row code { grid-column: 1 / -1; grid-row: 2; }
       .link-row .size { grid-column: 1 / -1; grid-row: 3; }
@@ -633,8 +639,8 @@
         var items = c.items.map(function (it, i) {
           var base = 'commands.items.' + i;
           return el('div', { class: 'item cmd' }, [
-            textField('Command', base + '.cmd', { placeholder: '!play' }),
-            textField('Hint (optional)', base + '.hint', { placeholder: '[song - artist]' }),
+            textField('Command', base + '.cmd'),
+            textField('Hint (optional)', base + '.hint'),
             textField('What it does', base + '.desc'),
             moves('commands.items', i, 1)
           ]);
@@ -814,7 +820,7 @@
       function showLockKeepingState() {
         $('app').hidden = true;
         $('lock').hidden = false;
-        $('lockErr').textContent = 'The PIN has changed. Enter the new one, your edits are kept.';
+        $('lockErr').textContent = "That PIN didn't work. Enter it again, your edits are kept.";
         $('pin').focus();
       }
 
