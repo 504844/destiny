@@ -11,6 +11,7 @@
 //    the right gig in front on each turn, two faces turning as one, no repaints mid-roll.
 // 4. The editor: opens, previews, typing, Save, guide and links.
 // 5. The editor's GIF download: frames, timing, and "nothing to show".
+// 6. The GIF looks like the live card: a still moment compared pixel by pixel with the page.
 //
 // Uses the local test server (dev-server.mjs) and the Chrome installed on this computer
 // (set CHROME=path to use another). Nothing here talks to the live site.
@@ -179,7 +180,7 @@ async function launchChrome() {
     await sleep(300);
     await rm(profile, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 }).catch(() => {});
   }
-  return { open, evaluate, trace, errors, close };
+  return { open, evaluate, trace, errors, close, send };
 }
 
 // what a page shows and whether its motion is set up right
@@ -425,6 +426,61 @@ async function editorChecks(chrome, base) {
   check(chrome.errors.length === 0, 'no errors', chrome.errors);
 }
 
+// ---------- 6. the GIF looks like the live card ----------
+// A still moment of the GIF must match a screenshot of the live page frozen at the same moment
+// (same gig in front, same light, same breath). Small differences from font smoothing are fine;
+// a second gig showing through, or anything missing, makes many pixels differ.
+async function gifLooksLive(chrome, base) {
+  console.log('GIF matches the live card');
+  for (const [card, n, sec, atMs] of [['gig', 2, 14, 3000], ['gig', 3, 7, 10000], ['all', 3, 14, 17000]]) {
+    await setContent(base, withGigs(n, sec));
+    // the live page, at its design size (no zoom), over black like the GIF, frozen at the moment
+    const width = card === 'all' ? 1080 : 900;
+    await chrome.open(`${base}/stream/${card}/`, { width, height: 1300 });
+    const clip = await chrome.evaluate(`(() => {
+      document.documentElement.style.background = '#000';
+      const R = ${sec * 1000}, P = R * ${n} * 14000 / (function g(a, b) { return b ? g(b, a % b) : a; })(R * ${n}, 14000);
+      const anims = document.getAnimations();
+      const wall0 = performance.timeOrigin + document.timeline.currentTime;
+      const target = Math.ceil(wall0 / P) * P + ${atMs};
+      anims.forEach((a) => { a.currentTime = a.currentTime + (target - wall0); a.pause(); });
+      ${card === 'all'
+        ? `const b = [...document.querySelectorAll('.slot')].reduce((m, s) => Math.max(m, s.getBoundingClientRect().bottom), 0); return { x: 0, y: 0, width: 1080, height: Math.ceil(b) + 20, zoom: document.body.style.zoom };`
+        : `const r = document.querySelector('.card').getBoundingClientRect(); return { x: Math.floor(r.left), y: Math.floor(r.top), width: Math.ceil(r.right) - Math.floor(r.left), height: Math.ceil(r.bottom) - Math.floor(r.top), zoom: document.body.style.zoom };`}
+    })()`);
+    await sleep(300);
+    const shot = await chrome.send('Page.captureScreenshot', { format: 'png', clip: { x: clip.x, y: clip.y, width: clip.width, height: clip.height, scale: 1 } });
+    const png = shot.result.data;
+
+    // the GIF from the editor, the frame showing that moment, compared in the page
+    await chrome.open(`${base}/stream/edit/`, { width: 1280, height: 900, settle: 300 });
+    await chrome.evaluate(`localStorage.setItem('dj-stream-pin', 'local'); 1`);
+    await chrome.open(`${base}/stream/edit/`, { width: 1280, height: 900, settle: 1200 });
+    const r = await chrome.evaluate(`(async () => {
+      const data = DJStream.normalize((await (await fetch('/api/stream?fresh=1')).json()).data);
+      const blob = await DJGif.make('${card}', data);
+      const dec = new ImageDecoder({ data: await blob.arrayBuffer(), type: 'image/gif' });
+      await dec.tracks.ready; await dec.completed;
+      const n = dec.tracks.selectedTrack.frameCount;
+      let t = 0, idx = 0;
+      for (let i = 0; i < n; i++) { const f = (await dec.decode({ frameIndex: i })).image; if (t <= ${atMs} + 0.5) idx = i; t += f.duration / 1000; f.close(); }
+      const gifFrame = (await dec.decode({ frameIndex: idx })).image;
+      const W = gifFrame.displayWidth, H = gifFrame.displayHeight;
+      const draw = (src) => { const c = new OffscreenCanvas(W, H); const x = c.getContext('2d'); x.fillStyle = '#000'; x.fillRect(0, 0, W, H); x.drawImage(src, 0, 0); return x.getImageData(0, 0, W, H).data; };
+      const g = draw(gifFrame);
+      const live = await createImageBitmap(await (await fetch('data:image/png;base64,${png}')).blob());
+      const l = draw(live);
+      let bad = 0;
+      for (let i = 0; i < g.length; i += 4) {
+        const d = Math.max(Math.abs(g[i] - l[i]), Math.abs(g[i + 1] - l[i + 1]), Math.abs(g[i + 2] - l[i + 2]));
+        if (d > 70) bad++;
+      }
+      return { gif: W + 'x' + H, live: live.width + 'x' + live.height, differ: +(100 * bad / (W * H)).toFixed(2) };
+    })()`);
+    check(r.gif === r.live && r.differ < 0.6, `${card} with ${n} gigs (every ${sec} s), ${atMs / 1000} s in: the GIF looks like the live card (${r.differ}% of pixels differ)`, { ...r, zoom: clip.zoom });
+  }
+}
+
 // ---------- run ----------
 const started = Date.now();
 await logicChecks();
@@ -436,6 +492,7 @@ try {
   await pageChecks(chrome, url);
   await editorChecks(chrome, url);
   await gifChecks(chrome, url);
+  await gifLooksLive(chrome, url);
 } catch (e) {
   failures++;
   console.log('  FAIL ' + (e.stack || e.message));

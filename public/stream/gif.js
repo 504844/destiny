@@ -79,12 +79,14 @@
   var DIM = '.tier.best::after,.date::after{opacity:0!important}';
   var BRIGHT = '.tier.best::after,.date::after{opacity:1!important}';
 
-  // which gig of a roll to draw: 'front' gig n facing us (the others turned away), 'none' no gigs
-  // (just the card behind them), 'only' gig n alone with nothing else drawn (for the turn)
+  // which gig of a roll to draw: 'front' gig n facing us (the others not drawn), 'none' no gigs
+  // (just the card behind them), 'only' gig n alone with nothing else drawn (for the turn).
+  // The other gigs are hidden outright: these still pictures are drawn flat, where a gig turned
+  // around (as the live page parks them) would show through mirrored.
   function faceCss(n, mode) {
     if (mode === 'none') return '.roll>.face{visibility:hidden!important}';
     var sel = '.roll>.face:nth-child(' + (n + 1) + ')';
-    var css = '.roll>.face{transform:rotateX(180deg)!important}' + sel + '{transform:none!important}';
+    var css = '.roll>.face{visibility:hidden!important;transform:none!important}' + sel + '{visibility:visible!important}';
     if (mode === 'only') css += 'body *{visibility:hidden!important}' + sel + ',' + sel + ' *{visibility:visible!important}';
     return css;
   }
