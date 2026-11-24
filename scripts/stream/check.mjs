@@ -203,6 +203,7 @@ const INSPECT = `(() => {
     roll: (() => { const r = document.querySelector('.roll'); return r ? { size: r.getAttribute('data-size'), now: r.offsetHeight + 'x' + r.children.length + 'x' + r.getAttribute('data-roll-ms') } : null; })(),
     singleGig: !!document.querySelector('.card > .ev'),
     venues: [...document.querySelectorAll('.venue')].map((v) => v.textContent),
+    cmdDescTops: [...document.querySelectorAll('.cmd .d')].map((e) => Math.round(e.getBoundingClientRect().top)),
     zoom: document.body.style.zoom,
   };
 })()`;
@@ -259,6 +260,7 @@ async function pageChecks(chrome, base) {
         if (n >= 2) check(s.roll && s.roll.size === s.roll.now, "the roll's depth matches the card's height", s.roll);
         if (n >= 1) check(s.venues[0] === GIGS[0].venue, 'the soonest gig comes first', s.venues);
       }
+      if (s.cmdDescTops.length) check(new Set(s.cmdDescTops).size === 1, 'command descriptions all sit on the same line, with or without a hint', s.cmdDescTops);
       check(s.glows.length === s.slots.length, 'every card has its border light', s.glows.length);
       check(s.glows.every((g) => g.size === g.now), "every light's path matches its card's size", s.glows.map((g) => g.size + ' vs ' + g.now));
       check(s.glows.every((g) => g.dots === 11 && g.running === 11 && g.swell === 1), 'every light is moving and swelling', s.glows);

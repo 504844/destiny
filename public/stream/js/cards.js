@@ -74,7 +74,9 @@
     grid.style.gridTemplateColumns = 'repeat(' + cols + ', 1fr)';
     c.items.forEach(function (i) {
       var cmd = el('div', 'cmd');
-      cmd.append(el('div', 'c', i.cmd), el('div', 'syn', i.hint || ' '), el('div', 'd', i.desc));
+      // a command without a hint still gets its hint line (a non-breaking space keeps its height),
+      // so every description sits on the same line
+      cmd.append(el('div', 'c', i.cmd), el('div', 'syn', i.hint || '\u00a0'), el('div', 'd', i.desc));
       grid.append(cmd);
     });
     card.append(grid);
