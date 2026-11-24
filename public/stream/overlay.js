@@ -398,6 +398,9 @@
 
   function mount(root, data, which) {
     applyAccent(data.accent);
+    // Stop the old cards' animations first. Removed elements can't use the GPU, so their
+    // animations would keep running on the main thread on every frame, piling up with each save.
+    if (root.getAnimations) root.getAnimations({ subtree: true }).forEach(function (a) { a.cancel(); });
     root.textContent = '';
     if (which === 'all') {
       var p = builders.prices(data);
