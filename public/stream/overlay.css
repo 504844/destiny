@@ -139,7 +139,7 @@ body.all .stack .slot {
 }
 
 .tier.best {
-  background: rgba(var(--cy), 0.16);
+  background: rgba(var(--cy), 0.12);
   box-shadow: inset 0 0 0 1px rgba(var(--cy), 0.5);
 }
 
@@ -267,7 +267,7 @@ body.all .stack .slot {
 }
 
 .date {
-  background: rgba(var(--cy), 0.16);
+  background: rgba(var(--cy), 0.12);
   box-shadow: inset 0 0 0 1px rgba(var(--cy), 0.5);
   border-radius: 14px;
   padding: 6px 14px;
@@ -359,7 +359,6 @@ body.all .stack .slot {
 .gig-row .date.dim {
   background: rgba(255, 255, 255, 0.045);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
-  animation: none;
 }
 
 .gig-info {
@@ -381,54 +380,58 @@ body.all .stack .slot {
   padding: 3px 12px;
 }
 
-@property --a {
-  syntax: '<angle>';
-  inherits: false;
-  initial-value: 0deg;
-}
+/* Animations only change transform and opacity, so the GPU compositor runs them
+   on its own thread: the page never repaints while they play, and a busy main
+   thread (polling, other sources, the encoder) can't make them stutter. */
 
-/* quiet light: a soft point of light slowly travels along each card's border */
-.card::before {
-  content: "";
+/* quiet light: a soft point of light slowly travels along each card's border.
+   .glow is a fixed 1px ring (a mask, rounded like the card); inside it a chain of soft dots
+   moves along the border at a steady speed. overlay.js sets each dot's path and strength. */
+.glow {
   position: absolute;
   inset: 0;
   border-radius: inherit;
   padding: 1px;
   pointer-events: none;
-  background: conic-gradient(from var(--a), transparent 0deg, transparent 290deg, rgba(var(--cy), 0.15) 320deg, rgba(var(--cy), 0.85) 350deg, transparent 360deg);
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
-  animation: run 14s linear infinite;
 }
 
-.s2 .card::before {
-  animation-delay: -4.6s;
+/* one dot: accent fading out from its centre; hidden until overlay.js starts it */
+.glow > i {
+  position: absolute;
+  left: -24px;
+  top: -24px;
+  width: 48px;
+  height: 48px;
+  background: radial-gradient(closest-side, rgba(var(--cy), 1), rgba(var(--cy), 0));
+  opacity: 0;
+  will-change: transform;
 }
 
-.s3 .card::before {
-  animation-delay: -9.3s;
-}
-
-@keyframes run {
-  to {
-    --a: 360deg;
-  }
-}
-
-/* highlighted tiles breathe very slowly */
+/* highlighted tiles breathe very slowly: a layer of accent fades in and out
+   over the tile, taking it from 0.12 to 0.22 accent and back. overlay.js runs the fade
+   on the shared clock, so the tiles are brightest when the border lights meet. */
 .tier.best,
 .date {
-  animation: breathe 6s ease-in-out infinite;
+  position: relative;
+  isolation: isolate;
 }
 
-@keyframes breathe {
-  0%,
-  100% {
-    background-color: rgba(var(--cy), 0.12);
-  }
+.tier.best::after,
+.date::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: rgba(var(--cy), 0.114);
+  pointer-events: none;
+  opacity: 0;
+  will-change: opacity;
+}
 
-  50% {
-    background-color: rgba(var(--cy), 0.22);
-  }
+.date.dim::after {
+  content: none;
 }
