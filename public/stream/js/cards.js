@@ -91,41 +91,50 @@
 
   function gigMeta(i) { return [i.place, i.city].filter(Boolean).join(' · '); }
 
-  // One gig: the original card. Two or three: a list with the next one highlighted.
+  // one gig: date tile, small label, venue, place and city, and on the right its tag
+  // (and with several gigs, dots showing which one of how many this is)
+  function gigFace(i, label, n, count) {
+    var ev = el('div', 'ev');
+    var tile = dateTile(i.date, 'date');
+    if (tile) ev.append(tile);
+    var info = el('div');
+    if (label) info.append(el('div', 'lab', label));
+    if (i.venue) info.append(el('div', 'venue', i.venue));
+    if (gigMeta(i)) info.append(el('div', 'meta', gigMeta(i)));
+    ev.append(info);
+    if (count < 2) {
+      if (i.tag) ev.append(el('div', 'tag', i.tag));
+      return ev;
+    }
+    var side = el('div', 'side');
+    if (i.tag) side.append(el('div', 'tag', i.tag));
+    var pips = el('div', 'pips');
+    for (var k = 0; k < count; k++) pips.append(el('i', k === n ? 'on' : null));
+    side.append(pips);
+    ev.append(side);
+    return ev;
+  }
+
+  // One gig: the original card. Two or three: one gig at a time, rolling to the next like a
+  // cube every g.rollSec seconds (js/motion.js runs the roll). The next gig comes first and
+  // keeps the small label for one gig; the later ones use the label for several.
   function renderGig(g) {
     var items = S.upcoming(g.items);
     if (!items.length) return null;
     var card = el('div', 'card');
-
+    card.style.padding = '12px 16px';
     if (items.length === 1) {
-      var i = items[0];
-      card.style.padding = '12px 16px';
-      var ev = el('div', 'ev');
-      var tile = dateTile(i.date, 'date');
-      if (tile) ev.append(tile);
-      var info = el('div');
-      if (g.label) info.append(el('div', 'lab', g.label));
-      if (i.venue) info.append(el('div', 'venue', i.venue));
-      if (gigMeta(i)) info.append(el('div', 'meta', gigMeta(i)));
-      ev.append(info);
-      if (i.tag) ev.append(el('div', 'tag', i.tag));
-      card.append(ev);
+      card.append(gigFace(items[0], g.label, 0, 1));
       return card;
     }
-
-    card.className = 'card gigs';
-    if (g.labelMany) card.append(el('div', 'lab', g.labelMany));
+    var roll = el('div', 'roll');
+    roll.setAttribute('data-roll-ms', String(g.rollSec * 1000));
     items.forEach(function (it, n) {
-      var row = el('div', 'gig-row');
-      var t = dateTile(it.date, n === 0 ? 'date' : 'date dim');
-      if (t) row.append(t);
-      var inf = el('div', 'gig-info');
-      if (it.venue) inf.append(el('div', 'venue', it.venue));
-      if (gigMeta(it)) inf.append(el('div', 'meta', gigMeta(it)));
-      row.append(inf);
-      if (it.tag) row.append(el('div', 'tag', it.tag));
-      card.append(row);
+      var face = el('div', 'face');
+      face.append(gigFace(it, n === 0 ? g.label : g.labelMany, n, items.length));
+      roll.append(face);
     });
+    card.append(roll);
     return card;
   }
 

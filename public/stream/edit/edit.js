@@ -139,6 +139,26 @@
     return el('label', { class: 'check' }, [input, document.createTextNode(label)]);
   }
 
+  // a row of buttons, one of which is chosen (like radio buttons)
+  function choiceField(label, path, options, note) {
+    var current = getPath(state, path);
+    var group = el('div', { class: 'seg', role: 'radiogroup', 'aria-label': label });
+    options.forEach(function (o) {
+      var on = o.value === current;
+      var b = el('button', { type: 'button', class: 'seg-btn' + (on ? ' on' : ''), role: 'radio', 'aria-checked': String(on), text: o.label });
+      b.addEventListener('click', function () {
+        if (getPath(state, path) === o.value) return;
+        setPath(state, path, o.value);
+        changed(true);
+      });
+      group.append(b);
+    });
+    return el('div', { class: 'field' }, [
+      el('span', { text: label }),
+      el('div', { class: 'seg-row' }, [group, note ? el('span', { class: 'muted seg-note', text: note }) : null])
+    ]);
+  }
+
   function switchField(path) {
     var input = el('input', { type: 'checkbox' });
     input.checked = !!getPath(state, path);
@@ -306,9 +326,12 @@
       ]),
       el('div', { class: 'sub-box' }, [
         el('div', { class: 'grid2' }, [
-          textField('Small text above (1 gig)', 'gig.label', { upper: true }),
-          textField('Small text above (2 or 3 gigs)', 'gig.labelMany', { upper: true })
-        ])
+          textField('Small text above the next gig', 'gig.label', { upper: true }),
+          textField('Small text above later gigs', 'gig.labelMany', { upper: true })
+        ]),
+        choiceField('With 2 or 3 gigs, show each one for', 'gig.rollSec',
+          D.ROLL_SECS.map(function (s) { return { value: s, label: s + ' s' }; }),
+          'Then the card rolls to the next gig, in time with the lights.')
       ])
     ], 'gig');
   }

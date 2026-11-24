@@ -321,63 +321,56 @@ body.all .stack .slot {
   white-space: nowrap;
 }
 
-/* two or three gigs: one card, a row per gig, the next one highlighted */
-.card.gigs {
-  padding: 12px 18px 6px;
+/* two or three gigs: one gig at a time, rolling to the next like a cube.
+   The card (background, border, light) stays still; only .roll's faces turn, inside it.
+   All faces share one grid cell, so the card is as tall as the tallest gig.
+   js/motion.js runs the roll on the shared clock (transform and opacity only). */
+.roll {
+  display: grid;
+  perspective: 520px;
+  overflow: hidden;
 }
 
-.card.gigs > .lab {
-  margin: 0 2px 4px;
+.face {
+  grid-area: 1 / 1;
+  backface-visibility: hidden;
+  will-change: transform;
 }
 
-.gig-row {
+/* until the roll starts (and in the GIF maker's still pictures) only the first gig shows:
+   the others are turned around, and faces never draw their back */
+.face:not(:first-child) {
+  transform: rotateX(180deg);
+}
+
+.side {
+  margin-left: auto;
   display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 8px 0;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 9px;
 }
 
-.gig-row + .gig-row {
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+.side .tag {
+  margin-left: 0;
 }
 
-.gig-row .date {
-  min-width: 58px;
-  padding: 5px 10px;
-  border-radius: 12px;
+/* which gig of how many: a dot each, the shown one lit */
+.pips {
+  display: flex;
+  gap: 6px;
+  padding-right: 2px;
 }
 
-.gig-row .day {
-  font-size: 28px;
+.pips i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.22);
 }
 
-.gig-row .mon {
-  font-size: 13px;
-  letter-spacing: 1.5px;
-}
-
-.gig-row .date.dim {
-  background: rgba(255, 255, 255, 0.045);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
-}
-
-.gig-info {
-  min-width: 0;
-}
-
-.gig-row .venue {
-  font-size: 24px;
-  line-height: 1.1;
-}
-
-.gig-row .meta {
-  font-size: 16px;
-  margin-top: 2px;
-}
-
-.gig-row .tag {
-  font-size: 15px;
-  padding: 3px 12px;
+.pips i.on {
+  background: var(--accent);
 }
 
 /* Animations only change transform and opacity, so the GPU compositor runs them
@@ -430,8 +423,4 @@ body.all .stack .slot {
   pointer-events: none;
   opacity: 0;
   will-change: opacity;
-}
-
-.date.dim::after {
-  content: none;
 }

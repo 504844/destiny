@@ -36,6 +36,7 @@
       show: true,
       label: 'NEXT LIVE GIG',
       labelMany: 'UPCOMING GIGS',
+      rollSec: 14, // with 2 or 3 gigs, seconds each gig shows before rolling to the next
       items: [
         { date: '2026-11-06', venue: 'Graffitti Underground', place: '', city: 'Kaunas', tag: 'TRANCE' }
       ]
@@ -43,6 +44,7 @@
   };
 
   var MAX_GIGS = 3;
+  var ROLL_SECS = [7, 14, 28]; // the choices in the editor; all fall on the lights' beat
   var DATE_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
   var MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
 
@@ -107,6 +109,7 @@
     o.gig.show = bool(g.show, true);
     o.gig.label = str(g.label, o.gig.label);
     o.gig.labelMany = str(g.labelMany, o.gig.labelMany);
+    if (ROLL_SECS.indexOf(Number(g.rollSec)) >= 0) o.gig.rollSec = Number(g.rollSec);
     var gigItem = function (i) {
       i = i || {};
       return { date: str(i.date, ''), venue: str(i.venue, ''), place: str(i.place, ''), city: str(i.city, ''), tag: str(i.tag, '') };
@@ -121,6 +124,7 @@
 
   S.DEFAULTS = DEFAULTS;
   S.MAX_GIGS = MAX_GIGS;
+  S.ROLL_SECS = ROLL_SECS;
   S.DATE_RE = DATE_RE;
   S.MONTHS = MONTHS;
   S.today = today;

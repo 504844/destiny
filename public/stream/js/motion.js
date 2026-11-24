@@ -120,13 +120,88 @@
     onBeat(tile, 0, '::after', now);
   }
 
-  // start everything that isn't running yet, and refit lights to any card that changed size
+  // ---- gig roll ----
+  // With 2 or 3 gigs the gig card shows one at a time (.roll, see cards.js). Every rollMs the
+  // shown gig turns up and away like a cube face while the next one turns in from below, as one
+  // rigid cube: both faces use the same timing and easing. The turn ends on the beat (rollMs is a
+  // multiple of GLOW.beatMs), as the lights line up and the date tiles are brightest.
+  // Gig n is in front from clock time n * rollMs (mod rollMs * count), so separate sources agree.
+  var ROLL = {
+    turnMs: 1000,                       // how long one roll takes
+    ease: [0.65, -0.12, 0.32, 1.12]     // cubic-bezier: a slight wind-up, then a soft snap
+  };
+
+  // CSS cubic-bezier timing function as a JS function (for the GIF maker, which draws the roll)
+  function cubicBezier(x1, y1, x2, y2) {
+    function at(a, b, t) { return 3 * a * (1 - t) * (1 - t) * t + 3 * b * (1 - t) * t * t + t * t * t; }
+    return function (x) {
+      if (x <= 0) return 0;
+      if (x >= 1) return 1;
+      var lo = 0, hi = 1, t = x;
+      for (var i = 0; i < 30; i++) {
+        var v = at(x1, x2, t);
+        if (Math.abs(v - x) < 1e-6) break;
+        if (v < x) lo = t; else hi = t;
+        t = (lo + hi) / 2;
+      }
+      return at(y1, y2, t);
+    };
+  }
+  var rollEase = cubicBezier(ROLL.ease[0], ROLL.ease[1], ROLL.ease[2], ROLL.ease[3]);
+
+  // Where gig n of count is at clock time ms: its turn in degrees (0 = facing us, 90 = rolled
+  // up and away, -90 = waiting below) and whether it's drawn at all.
+  function rollState(n, count, rollMs, ms) {
+    var P = rollMs * count, T = ROLL.turnMs;
+    var u = (((ms - n * rollMs) % P) + P) % P;
+    if (u < rollMs - T) return { deg: 0, shown: true };
+    if (u < rollMs) return { deg: 90 * rollEase((u - (rollMs - T)) / T), shown: true };
+    if (u < P - T) return { deg: -90, shown: false };
+    return { deg: -90 + 90 * rollEase((u - (P - T)) / T), shown: true };
+  }
+
+  // the turn as a transform: around the middle of a cube as deep as the roll is tall
+  function rollTransform(deg, h) {
+    return 'translateZ(' + (-h).toFixed(2) + 'px) rotateX(' + deg + 'deg) translateZ(' + h.toFixed(2) + 'px)';
+  }
+
+  // (Re)start a gig roll for its current height. One looping animation per face, matching rollState.
+  function startRoll(roll, now) {
+    var H = roll.offsetHeight;
+    var count = roll.children.length;
+    var rollMs = Number(roll.getAttribute('data-roll-ms')) || 14000;
+    var size = H + 'x' + count + 'x' + rollMs;
+    if (!H || count < 2 || roll.getAttribute('data-size') === size) return;
+    roll.setAttribute('data-size', size);
+    var P = rollMs * count, T = ROLL.turnMs, h = H / 2;
+    var ease = 'cubic-bezier(' + ROLL.ease.join(', ') + ')';
+    // Only the transform animates. A waiting face is parked turned around (180deg): faces never
+    // draw their back (backface-visibility: hidden), so it's fully hidden without any fading.
+    var frames = [
+      { offset: 0, transform: rollTransform(0, h) },
+      { offset: (rollMs - T) / P, transform: rollTransform(0, h), easing: ease },
+      { offset: rollMs / P, transform: rollTransform(90, h) },
+      { offset: rollMs / P, transform: rollTransform(180, h) },
+      { offset: (P - T) / P, transform: rollTransform(180, h) },
+      { offset: (P - T) / P, transform: rollTransform(-90, h), easing: ease },
+      { offset: 1, transform: rollTransform(0, h) }
+    ];
+    Array.prototype.forEach.call(roll.children, function (face, n) {
+      face.getAnimations().forEach(function (a) { a.cancel(); });
+      var anim = face.animate(frames, { duration: P, iterations: Infinity });
+      anim.startTime = now.tl - ((((now.ms - n * rollMs) % P) + P) % P);
+    });
+  }
+
+  // start everything that isn't running yet, and refit lights and rolls to anything that changed size
   function startMotion() {
     var now = clockNow();
     var gs = document.querySelectorAll('.glow');
     for (var i = 0; i < gs.length; i++) startGlow(gs[i], now);
-    var ts = document.querySelectorAll('.tier.best, .date:not(.dim)');
+    var ts = document.querySelectorAll('.tier.best, .date');
     for (var j = 0; j < ts.length; j++) startBreathe(ts[j], now);
+    var rs = document.querySelectorAll('.roll');
+    for (var k = 0; k < rs.length; k++) startRoll(rs[k], now);
   }
 
   S.GLOW = GLOW;
@@ -135,5 +210,8 @@
   S.beatProgress = beatProgress;
   S.clockNow = clockNow;
   S.glow = glow;
+  S.ROLL = ROLL;
+  S.cubicBezier = cubicBezier;
+  S.rollState = rollState;
   S.startMotion = startMotion;
 })(window.DJStream = window.DJStream || {});

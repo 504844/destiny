@@ -7,7 +7,8 @@
 //    Link size: the right cards and rows, every animation running, each light's path
 //    matching its card, no errors, and no repaints at all while animating (the
 //    animations must stay on the GPU compositor, or the overlay can stutter on stream).
-// 3. The beat: all lights line up in the middle of their cards on the beat.
+// 3. The beat: all lights line up in the middle of their cards on the beat. The gig roll:
+//    the right gig in front on each turn, two faces turning as one, no repaints mid-roll.
 // 4. The editor: opens, previews, typing, Save, guide and links.
 // 5. The editor's GIF download: frames, timing, and "nothing to show".
 //
@@ -39,8 +40,8 @@ const GIGS = [
   { date: day(25), venue: 'Test Club', place: 'Youngs Club', city: 'Vilnius', tag: 'TECHNO' },
   { date: day(46), venue: 'Third Venue', place: '', city: 'Riga', tag: '' },
 ];
-const withGigs = (n) => ({
-  gig: { show: true, items: n ? GIGS.slice(0, n) : [{ date: day(-3), venue: 'Past gig', place: '', city: 'Kaunas', tag: '' }] },
+const withGigs = (n, rollSec = 14) => ({
+  gig: { show: true, rollSec, items: n ? GIGS.slice(0, n) : [{ date: day(-3), venue: 'Past gig', place: '', city: 'Kaunas', tag: '' }] },
 });
 
 // ---------- 1. logic ----------
@@ -73,6 +74,24 @@ async function logicChecks() {
   check(Math.abs(D.glowDotAt(path, 0, 5 * L + L / 2) - path.total / 2) < 1e-6, 'and at the bottom middle half-way');
   const step = (D.glowDotAt(path, 0, 1000) - D.glowDotAt(path, 0, 0) + path.total) % path.total;
   check(Math.abs(step - path.total / L * 1000) < 1e-6, 'the light moves at a steady speed');
+
+  check(def.gig.rollSec === 14 && D.normalize({ gig: { rollSec: 28 } }).gig.rollSec === 28 && D.normalize({ gig: { rollSec: 9 } }).gig.rollSec === 14,
+    'gig roll time: 14 s by default, 7/14/28 kept, anything else back to 14');
+  check(D.ROLL_SECS.every((sec) => (sec * 1000) % D.GLOW.beatMs === 0), 'every roll time falls on the beat');
+  const ok = [];
+  for (const count of [2, 3]) for (const sec of D.ROLL_SECS) {
+    const R = sec * 1000, P = R * count, T = D.ROLL.turnMs;
+    for (let n = 0; n < count; n++) {
+      const front = D.rollState(n, count, R, 7 * P + n * R + 10);
+      const away = D.rollState(n, count, R, 7 * P + n * R + R + 10);
+      const half = D.rollState(n, count, R, 7 * P + n * R - T / 2);
+      const next = D.rollState((n + 1) % count, count, R, 7 * P + n * R + R - T / 2);
+      const out = D.rollState(n, count, R, 7 * P + n * R + R - T / 2);
+      ok.push(front.shown && Math.abs(front.deg) < 1 && !away.shown && half.shown && half.deg < 0 && half.deg > -90 &&
+        Math.abs(out.deg - next.deg - 90) < 1e-9);
+    }
+  }
+  check(ok.every(Boolean), 'each gig is in front on its turn, hidden after, and two faces turn as one cube');
 }
 
 // ---------- Chrome over the DevTools protocol ----------
@@ -180,8 +199,9 @@ const INSPECT = `(() => {
   return {
     slots: [...document.querySelectorAll('.slot')].map((s) => s.className),
     glows, tiles,
-    gigRows: document.querySelectorAll('.gig-row').length,
-    singleGig: !!document.querySelector('.ev'),
+    faces: [...document.querySelectorAll('.roll .face')].map((f) => f.getAnimations().filter((a) => a.playState === 'running').length),
+    roll: (() => { const r = document.querySelector('.roll'); return r ? { size: r.getAttribute('data-size'), now: r.offsetHeight + 'x' + r.children.length + 'x' + r.getAttribute('data-roll-ms') } : null; })(),
+    singleGig: !!document.querySelector('.card > .ev'),
     venues: [...document.querySelectorAll('.venue')].map((v) => v.textContent),
     zoom: document.body.style.zoom,
   };
@@ -213,9 +233,14 @@ async function setContent(base, data) {
   if (!r.ok) throw new Error('could not set test content');
 }
 
+// GPU only: no repaint or layout at all. Chrome may do one small style update when a looping
+// animation starts its next loop (about once per 14 s light trip); anything more means work on
+// the main thread every frame, which is what makes an overlay stutter.
+const gpuOnly = (t) => t.paint === 0 && t.layout === 0 && t.style <= 1;
+
 // ---------- 2 + 3. overlay pages ----------
 async function pageChecks(chrome, base) {
-  const expectGig = { 0: 'hidden', 1: 'one gig', 2: '2 rows', 3: '3 rows' };
+  const expectGig = { 0: "hidden", 1: "one gig", 2: "rolling", 3: "rolling" };
   for (const n of [0, 1, 2, 3]) {
     await setContent(base, withGigs(n));
     for (const card of ['gig', 'all', 'prices', 'commands']) {
@@ -229,19 +254,18 @@ async function pageChecks(chrome, base) {
       check(s.slots.length === wantSlots, `${wantSlots} card${wantSlots === 1 ? '' : 's'} shown`, s.slots);
       if (card === 'gig' || card === 'all') {
         if (n === 0) check(s.venues.length === 0, 'no gig shown when all gigs are past', s.venues);
-        if (n === 1) check(s.singleGig && s.gigRows === 0 && s.venues.length === 1, 'one gig uses the single-gig layout', s);
-        if (n >= 2) check(!s.singleGig && s.gigRows === n, `${n} gigs use ${n} rows`, s);
+        if (n === 1) check(s.singleGig && s.faces.length === 0 && s.venues.length === 1, 'one gig uses the single-gig card', s);
+        if (n >= 2) check(!s.singleGig && s.faces.length === n && s.faces.every((a) => a === 1), `${n} gigs roll, one at a time, every face animated`, s.faces);
+        if (n >= 2) check(s.roll && s.roll.size === s.roll.now, "the roll's depth matches the card's height", s.roll);
         if (n >= 1) check(s.venues[0] === GIGS[0].venue, 'the soonest gig comes first', s.venues);
       }
       check(s.glows.length === s.slots.length, 'every card has its border light', s.glows.length);
       check(s.glows.every((g) => g.size === g.now), "every light's path matches its card's size", s.glows.map((g) => g.size + ' vs ' + g.now));
       check(s.glows.every((g) => g.dots === 11 && g.running === 11 && g.swell === 1), 'every light is moving and swelling', s.glows);
-      const lit = s.tiles.filter((t) => !t.dim), dim = s.tiles.filter((t) => t.dim);
-      check(lit.every((t) => t.anims === 1), `highlighted tiles breathe (${lit.length})`, lit);
-      check(dim.every((t) => t.anims === 0), `later gigs' dates stay still (${dim.length})`, dim);
+      check(s.tiles.every((t) => t.anims === 1), `highlighted tiles and gig dates breathe (${s.tiles.length})`, s.tiles);
 
       const t = await chrome.trace(3000);
-      check(t.paint === 0 && t.style === 0 && t.layout === 0, 'no repaints while animating (GPU only)', t);
+      check(gpuOnly(t), 'no repaints while animating (GPU only)', t);
       check(chrome.errors.length === 0, 'no errors', chrome.errors);
 
       if (card === 'all' && n === 3) {
@@ -256,6 +280,44 @@ async function pageChecks(chrome, base) {
     }
   }
 
+  // The gig roll: on the shared clock the right gig is in front, the others hidden; and a
+  // trace taken across a real roll shows no main-thread work (it must stay on the GPU).
+  for (const [n, sec] of [[2, 7], [3, 7], [3, 28]]) {
+    console.log(`gig page, ${n} gigs rolling every ${sec} s`);
+    await setContent(base, withGigs(n, sec));
+    chrome.errors.length = 0;
+    await chrome.open(`${base}/stream/gig/`);
+    const r = await chrome.evaluate(`(() => {
+      const R = ${sec * 1000}, count = ${n}, P = R * count, T = DJStream.ROLL.turnMs;
+      const faces = [...document.querySelectorAll('.roll .face')];
+      const anims = faces.map((f) => f.getAnimations()[0]);
+      const saved = anims.map((a) => a.currentTime);
+      const wall0 = performance.timeOrigin + document.timeline.currentTime;
+      const cycle = Math.ceil(wall0 / P) * P;
+      const at = (ms) => anims.forEach((a, i) => { a.currentTime = saved[i] + (ms - wall0); });
+      const look = () => faces.map((f) => { const m = new DOMMatrix(getComputedStyle(f).transform); return { o: m.m33 > 1e-3 ? 1 : 0, flat: Math.abs(m.m22 - 1) < 1e-3 && Math.abs(m.m23) < 1e-3 }; }); // o: facing us, so drawn
+      const turns = [];
+      for (let k = 0; k < count; k++) {
+        at(cycle + k * R + 500); const settled = look();
+        at(cycle + k * R - T / 2); const mid = look();
+        turns.push({ settled, mid });
+      }
+      anims.forEach((a, i) => { a.currentTime = saved[i]; });
+      const wait = R - ((wall0 % R) + R) % R - T - 300;
+      return { turns, wait: wait < 0 ? wait + R : wait };
+    })()`);
+    check(r.turns.every((t, k) => t.settled.every((f, i) => (i === k ? f.o === 1 && f.flat : f.o === 0))),
+      'on each turn only that gig shows, facing straight ahead', r.turns.map((t) => t.settled));
+    check(r.turns.every((t, k) => t.mid.filter((f) => f.o === 1 && !f.flat).length === 2),
+      'mid-roll exactly two gigs show, both turning', r.turns.map((t) => t.mid));
+    if (sec === 7) {
+      await sleep(Math.max(0, r.wait - 500)); // the trace starts just before the next roll and covers it
+      const t = await chrome.trace(2000);
+      check(gpuOnly(t), 'no repaints during a roll (GPU only)', t);
+    }
+    check(chrome.errors.length === 0, 'no errors', chrome.errors);
+  }
+
   // Saving in the editor while the overlay is on stream: the cards are rebuilt, and the old
   // cards' animations must not linger (they would run on the main thread on every frame).
   console.log('all page, saving new content while it is showing');
@@ -268,14 +330,14 @@ async function pageChecks(chrome, base) {
     await setContent(base, withGigs(n));
     await sleep(6500); // the overlay checks for new content every 5 s
     const s = await chrome.evaluate(INSPECT);
-    const shown = n === 1 ? s.singleGig && s.venues.length === 1 : s.gigRows === n;
+    const shown = n === 1 ? s.singleGig && s.venues.length === 1 : s.faces.length === n;
     check(shown, `after a save with ${n} gig${n === 1 ? '' : 's'}, the stream shows it`, s.venues);
-    const expected = s.glows.reduce((sum, g) => sum + g.dots + 1, 0) + s.tiles.filter((t) => !t.dim).length;
+    const expected = s.glows.reduce((sum, g) => sum + g.dots + 1, 0) + s.tiles.length + s.faces.length;
     check((await count()) === expected, `no leftover animations (${expected} running)`, await count());
   }
   check((await count()) === before, 'back to the same number of animations as before the saves', { before, after: await count() });
   const t = await chrome.trace(3000);
-  check(t.paint === 0 && t.style === 0 && t.layout === 0, 'still no repaints after several saves', t);
+  check(gpuOnly(t), 'still no repaints after several saves', t);
   check(chrome.errors.length === 0, 'no errors', chrome.errors);
 
   // Studio may give the source another size: paths must follow the zoom
@@ -306,12 +368,15 @@ async function gifChecks(chrome, base) {
   console.log('GIF download');
   await chrome.open(`${base}/stream/edit/`, { width: 1280, height: 900, settle: 300 });
   await chrome.evaluate(`localStorage.setItem('dj-stream-pin', 'local'); 1`);
-  for (const [n, card] of [[3, 'all'], [3, 'gig'], [2, 'gig'], [1, 'gig'], [3, 'prices'], [0, 'gig']]) {
-    await setContent(base, withGigs(n));
+  const lcm = (a, b) => { const g = (x, y) => (y ? g(y, x % y) : x); return (a * b) / g(a, b); };
+  for (const [n, card, sec] of [[3, 'all', 14], [3, 'gig', 7], [2, 'gig', 14], [1, 'gig', 14], [3, 'prices', 14], [0, 'gig', 14]]) {
+    await setContent(base, withGigs(n, sec));
     await chrome.open(`${base}/stream/edit/`, { width: 1280, height: 900, settle: 1200 });
     const r = await chrome.evaluate(GIF(card));
     if (n === 0) { check(r.empty, `${card} with no upcoming gigs says "Nothing to show"`, r); continue; }
-    check(!r.error && r.frames === 420 && r.ms === 14000, `${card} (${n} gig${n === 1 ? '' : 's'}): 420 frames, 14 s loop, ${r.w}x${r.h}, ${r.kb} KB`, r);
+    const loop = card === 'prices' || n < 2 ? 14 : lcm(14, sec * n);
+    check(!r.error && r.frames === loop * 30 && r.ms === loop * 1000,
+      `${card} (${n} gig${n === 1 ? '' : 's'}${n > 1 && card !== 'prices' ? `, rolling every ${sec} s` : ''}): ${loop} s loop at 30 fps, ${r.w}x${r.h}, ${r.kb} KB`, r);
   }
 }
 
@@ -327,7 +392,7 @@ const EDITOR = `(async () => {
     guideParts: document.querySelectorAll('.guide-part').length,
     links: [...document.querySelectorAll('.link-row')].map((r) => r.querySelector('.link-name').textContent + ':' + !!r.querySelector('.gif-btn')),
   };
-  const input = field('Small text above (2 or 3 gigs)');
+  const input = field('Small text above later gigs');
   input.value = 'NEXT UP';
   input.dispatchEvent(new Event('input', { bubbles: true }));
   await wait(600);
