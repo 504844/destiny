@@ -20,6 +20,7 @@
     loopMs: 14000,    // one trip around a card, starting at the top middle on whole multiples of the clock
     beatMs: 7000,     // lights and tiles are brightest on each beat (every half loop)
     rest: 0.45,       // light strength half-way between beats
+    beatEase: [0.37, 0, 0.63, 1], // rise and fall like a wave (sine ease), for the swell and the tiles
     spacing: 20,      // px between dots along the border
     radius: 24,       // px, each dot fades out linearly to this radius
     dots: [0.84, 0.66, 0.42, 0.2, 0.11, 0.1, 0.08, 0.07, 0.05, 0.035, 0.015]
@@ -72,8 +73,9 @@
   function onBeat(target, low, pseudo, now) {
     var opts = { duration: GLOW.beatMs, iterations: Infinity };
     if (pseudo) opts.pseudoElement = pseudo;
+    var ease = 'cubic-bezier(' + GLOW.beatEase.join(', ') + ')';
     var anim = target.animate(
-      [{ opacity: low, easing: 'ease-in-out' }, { opacity: 1, easing: 'ease-in-out' }, { opacity: low }],
+      [{ opacity: low, easing: ease }, { opacity: 1, easing: ease }, { opacity: low }],
       opts
     );
     anim.startTime = now.tl - beatProgress(now.ms) * GLOW.beatMs;

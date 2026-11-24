@@ -231,23 +231,13 @@
     return 1 - clear;
   }
 
-  // CSS ease-in-out, cubic-bezier(0.42, 0, 0.58, 1)
-  function easeInOut(x) {
-    var t = x;
-    for (var i = 0; i < 8; i++) {
-      var bx = 3 * (1 - t) * (1 - t) * t * 0.42 + 3 * (1 - t) * t * t * 0.58 + t * t * t;
-      var d = 3 * (1 - t) * (1 - t) * 0.42 + 6 * (1 - t) * t * (0.58 - 0.42) + 3 * t * t * (1 - 0.58);
-      if (!d) break;
-      t -= (bx - x) / d;
-      t = Math.min(1, Math.max(0, t));
-    }
-    return 3 * (1 - t) * t * t + t * t * t;
-  }
-
-  // tile brightness 0..1; the page starts each breath half-way, so it peaks on the beat (time 0)
+  // tile brightness 0..1, on the same curve as the page (GLOW.beatEase); the page starts each
+  // breath half-way, so it peaks on the beat (time 0)
+  var beatEase = null;
   function breathe(time) {
+    if (!beatEase) beatEase = window.DJStream.cubicBezier.apply(null, window.DJStream.GLOW.beatEase);
     var p = ((time / BREATHE_S + 0.5) % 1 + 1) % 1;
-    return p < 0.5 ? easeInOut(p * 2) : 1 - easeInOut((p - 0.5) * 2);
+    return p < 0.5 ? beatEase(p * 2) : 1 - beatEase((p - 0.5) * 2);
   }
 
   // ---------- gig roll ----------

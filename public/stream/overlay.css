@@ -403,9 +403,12 @@ body.all .stack .slot {
   will-change: transform;
 }
 
-/* highlighted tiles breathe very slowly: a layer of accent fades in and out
-   over the tile, taking it from 0.12 to 0.22 accent and back. js/motion.js runs the fade
-   on the shared clock, so the tiles are brightest when the border lights meet. */
+/* highlighted tiles breathe very slowly: a soft glow fades in and out over the tile,
+   brightest at the top and fading down, with the tile's edge lighting up a little, like the
+   border light. A glow rather than one flat tint, so the fade looks smooth: a flat dark
+   colour can only step through a handful of shades (and video compression shows those
+   steps), while every pixel of a glow crosses to its next shade at a different moment.
+   js/motion.js runs the fade on the shared clock, brightest when the border lights meet. */
 .tier.best,
 .date {
   position: relative;
@@ -419,7 +422,8 @@ body.all .stack .slot {
   inset: 0;
   z-index: -1;
   border-radius: inherit;
-  background: rgba(var(--cy), 0.114);
+  background: radial-gradient(130% 100% at 50% 0%, rgba(var(--cy), 0.22), rgba(var(--cy), 0.05) 85%);
+  box-shadow: inset 0 0 0 1px rgba(var(--cy), 0.4);
   pointer-events: none;
   opacity: 0;
   will-change: opacity;
