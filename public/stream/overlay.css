@@ -422,8 +422,8 @@ body.all .stack .slot {
   inset: 0;
   z-index: -1;
   border-radius: inherit;
-  background: radial-gradient(130% 100% at 50% 0%, rgba(var(--cy), 0.22), rgba(var(--cy), 0.05) 85%);
-  box-shadow: inset 0 0 0 1px rgba(var(--cy), 0.4);
+  background: radial-gradient(130% 100% at 50% 0%, rgba(var(--cy), 0.15), rgba(var(--cy), 0.035) 85%);
+  box-shadow: inset 0 0 0 1px rgba(var(--cy), 0.25);
   pointer-events: none;
   opacity: 0;
   will-change: opacity;
