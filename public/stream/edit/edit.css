@@ -312,47 +312,12 @@ label.f > span, .field > span, .group-title { font-size: 12px; font-weight: 500;
 .steps { padding: 12px 16px; border-top: 1px solid var(--line); color: var(--muted); display: grid; gap: 4px; }
 .steps ol { margin: 0; padding-left: 18px; display: grid; gap: 2px; }
 
-/* how to use */
 .guide-body { display: grid; }
-.guide-part { padding: 16px; border-top: 1px solid var(--line); display: grid; gap: 12px; }
+.guide-part { padding: 14px 16px; border-top: 1px solid var(--line); display: grid; gap: 8px; }
 .guide-part:first-child { border-top: 0; }
-.guide-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
-.guide h3 { font-size: 15px; font-weight: 600; margin: 0; }
-.when { font-size: 12px; font-weight: 500; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; }
-.guide-sub { color: var(--muted); max-width: 75ch; }
-
-.ways { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.way { border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; display: grid; gap: 4px; align-content: start; background: var(--sub); }
-.way-title { display: flex; align-items: center; gap: 8px; font-weight: 600; }
-.way-tag { font-size: 11px; font-weight: 500; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--line-strong); color: var(--muted); }
-.way.main { border-color: var(--accent); background: var(--panel); }
-.way.main .way-tag { border-color: var(--accent); color: var(--accent); }
-.way p { color: var(--muted); }
-
-ol.do { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; counter-reset: step; max-width: 80ch; }
-ol.do > li { counter-increment: step; display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: 10px; align-items: start; }
-ol.do > li::before {
-  content: counter(step);
-  width: 24px; height: 24px; border-radius: 50%;
-  display: grid; place-items: center;
-  font-size: 12px; font-weight: 600;
-  background: var(--sub); border: 1px solid var(--line-strong); color: var(--text);
-}
-ol.do > li > span { padding-top: 2px; }
-
-.tip { display: grid; gap: 4px; background: var(--sub); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; max-width: 80ch; }
-.tip-title { font-size: 12px; font-weight: 600; color: var(--muted); }
-.tip ul { margin: 0; padding-left: 18px; display: grid; gap: 3px; }
-
-kbd, .val {
-  font: 12px ui-monospace, SFMono-Regular, Consolas, monospace;
-  padding: 1px 6px; border-radius: 4px; border: 1px solid var(--line-strong); background: var(--sub); white-space: nowrap;
-}
-
-.fixes { display: grid; grid-template-columns: minmax(180px, 34%) minmax(0, 1fr); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; max-width: 900px; }
-.fixes > div { padding: 9px 12px; border-top: 1px solid var(--line); }
-.fixes > div:nth-child(-n+2) { border-top: 0; }
-.fixes .problem { font-weight: 500; background: var(--sub); }
+.guide h3 { font-size: 14px; font-weight: 600; margin: 0; }
+.guide h3 .muted { font-weight: 400; }
+.guide ol, .guide ul { margin: 0; padding-left: 20px; display: grid; gap: 5px; max-width: 80ch; }
 
 .color-row { display: flex; gap: 8px; align-items: center; }
 .color-row input[type=color] { width: 44px; height: 34px; padding: 2px; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--field); cursor: pointer; }
@@ -384,9 +349,4 @@ kbd, .val {
   .item.gig .moves { grid-column: 1 / -1; }
   .link-row { grid-template-columns: 1fr auto; }
   .link-row code { grid-column: 1 / -1; grid-row: 2; }
-  .ways { grid-template-columns: 1fr; }
-  .fixes { grid-template-columns: 1fr; }
-  .fixes > div { border-top: 0; }
-  .fixes .problem { border-top: 1px solid var(--line); }
-  .fixes .problem:first-child { border-top: 0; }
 }

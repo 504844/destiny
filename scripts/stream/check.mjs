@@ -421,7 +421,7 @@ async function editorChecks(chrome, base) {
   check(r.previewUpdated, 'typing updates the preview');
   check(r.saveEnabled && r.saved === 'NEXT UP' && /Saved/.test(r.statusAfterSave), 'Save stores the change', r);
   check(r.links.length === 4 && r.links.every((l) => l.endsWith(':true')), 'all four links have a Download GIF button', r.links);
-  check(r.guideParts === 5, 'the guide has all its parts', r.guideParts);
+  check(r.guideParts === 4, 'the guide has all its parts (A-D)', r.guideParts);
   check(chrome.errors.length === 0, 'no errors', chrome.errors);
 }
 
