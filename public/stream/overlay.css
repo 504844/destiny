@@ -386,7 +386,7 @@ body.all .stack .slot {
 
 /* quiet light: a soft point of light slowly travels along each card's border.
    .glow is a fixed 1px ring (a mask, rounded like the card); inside it a chain of soft dots
-   moves along the border at a steady speed. overlay.js sets each dot's path and strength. */
+   moves along the border at a steady speed. js/motion.js sets each dot's path and strength. */
 .glow {
   position: absolute;
   inset: 0;
@@ -398,7 +398,7 @@ body.all .stack .slot {
   mask-composite: exclude;
 }
 
-/* one dot: accent fading out from its centre; hidden until overlay.js starts it */
+/* one dot: accent fading out from its centre; hidden until js/motion.js starts it */
 .glow > i {
   position: absolute;
   left: -24px;
@@ -411,7 +411,7 @@ body.all .stack .slot {
 }
 
 /* highlighted tiles breathe very slowly: a layer of accent fades in and out
-   over the tile, taking it from 0.12 to 0.22 accent and back. overlay.js runs the fade
+   over the tile, taking it from 0.12 to 0.22 accent and back. js/motion.js runs the fade
    on the shared clock, so the tiles are brightest when the border lights meet. */
 .tier.best,
 .date {

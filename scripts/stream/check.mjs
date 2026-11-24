@@ -8,7 +8,8 @@
 //    matching its card, no errors, and no repaints at all while animating (the
 //    animations must stay on the GPU compositor, or the overlay can stutter on stream).
 // 3. The beat: all lights line up in the middle of their cards on the beat.
-// 4. The editor's GIF download: frames, timing, and "nothing to show".
+// 4. The editor: opens, previews, typing, Save, guide and links.
+// 5. The editor's GIF download: frames, timing, and "nothing to show".
 //
 // Uses the local test server (dev-server.mjs) and the Chrome installed on this computer
 // (set CHROME=path to use another). Nothing here talks to the live site.
@@ -46,9 +47,9 @@ const withGigs = (n) => ({
 async function logicChecks() {
   console.log('Logic');
   const ctx = { window: {}, document: { body: null }, console };
-  vm.runInNewContext(await readFile(join(STREAM, 'overlay.js'), 'utf8'), ctx);
+  for (const f of ['js/content.js', 'js/motion.js']) vm.runInNewContext(await readFile(join(STREAM, f), 'utf8'), ctx);
   const D = ctx.window.DJStream;
-  check(!!D && typeof D.normalize === 'function', 'overlay.js loads and exports DJStream');
+  check(!!D && typeof D.normalize === 'function', 'content.js and motion.js load and export DJStream');
 
   const def = D.normalize(null);
   check(JSON.stringify(def) === JSON.stringify(D.DEFAULTS), 'no content gives the defaults');
@@ -314,6 +315,49 @@ async function gifChecks(chrome, base) {
   }
 }
 
+// ---------- 5. editor ----------
+const EDITOR = `(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  const stages = () => [...document.querySelectorAll('.stage')].map((s) => s.offsetHeight);
+  const field = (label) => [...document.querySelectorAll('label.f')].find((l) => l.querySelector('span').textContent === label).querySelector('input');
+  const out = {
+    unlocked: !document.getElementById('app').hidden,
+    status: document.getElementById('status').textContent,
+    stages: stages(),
+    guideParts: document.querySelectorAll('.guide-part').length,
+    links: [...document.querySelectorAll('.link-row')].map((r) => r.querySelector('.link-name').textContent + ':' + !!r.querySelector('.gif-btn')),
+  };
+  const input = field('Small text above (2 or 3 gigs)');
+  input.value = 'NEXT UP';
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+  await wait(600);
+  const gigFrame = [...document.querySelectorAll('.stage iframe')].find((f) => f.src.includes('/stream/gig/'));
+  out.previewUpdated = gigFrame.contentDocument.body.textContent.includes('NEXT UP');
+  out.saveEnabled = !document.getElementById('saveBtn').disabled;
+  document.getElementById('saveBtn').click();
+  await wait(800);
+  out.statusAfterSave = document.getElementById('status').textContent;
+  out.saved = (await (await fetch('/api/stream?fresh=1')).json()).data.gig.labelMany;
+  return out;
+})()`;
+
+async function editorChecks(chrome, base) {
+  console.log('Editor');
+  await setContent(base, withGigs(2));
+  await chrome.open(`${base}/stream/edit/`, { width: 1280, height: 900, settle: 300 });
+  await chrome.evaluate(`localStorage.setItem('dj-stream-pin', 'local'); 1`);
+  chrome.errors.length = 0;
+  await chrome.open(`${base}/stream/edit/`, { width: 1280, height: 900, settle: 2000 });
+  const r = await chrome.evaluate(EDITOR);
+  check(r.unlocked && r.status === 'All changes saved', 'opens with the saved content', r.status);
+  check(r.stages.length === 3 && r.stages.every((h) => h > 60), 'all three previews show their card', r.stages);
+  check(r.previewUpdated, 'typing updates the preview');
+  check(r.saveEnabled && r.saved === 'NEXT UP' && /Saved/.test(r.statusAfterSave), 'Save stores the change', r);
+  check(r.links.length === 4 && r.links.every((l) => l.endsWith(':true')), 'all four links have a Download GIF button', r.links);
+  check(r.guideParts === 5, 'the guide has all its parts', r.guideParts);
+  check(chrome.errors.length === 0, 'no errors', chrome.errors);
+}
+
 // ---------- run ----------
 const started = Date.now();
 await logicChecks();
@@ -323,6 +367,7 @@ let chrome;
 try {
   chrome = await launchChrome();
   await pageChecks(chrome, url);
+  await editorChecks(chrome, url);
   await gifChecks(chrome, url);
 } catch (e) {
   failures++;

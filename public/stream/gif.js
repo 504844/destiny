@@ -9,17 +9,17 @@
       the travelling border light is left out.
    3. Every frame is then computed here: the tiles blend between the two images, and the light
       is drawn on the card's border from the same dot chain and path the live page animates
-      (DJStream.GLOW and glowPath in overlay.js).
+      (DJStream.GLOW and glowPath in js/motion.js).
    4. Frames are written as a GIF89a with one shared palette, each frame storing only the
       pixels that changed.
 
    GIF has no partial transparency, so the card is made solid (as if over black) and its soft
    drop shadow is left out. The loop is 14 s, one full trip of the light, and starts on the
-   beat where the lights line up (see "motion" in overlay.js); there are two beats in it. */
+   beat where the lights line up (see js/motion.js); there are two beats in it. */
 (function () {
   'use strict';
 
-  var LOOP_S = 14;          // one trip of the border light (GLOW.loopMs in overlay.js)
+  var LOOP_S = 14;          // one trip of the border light (GLOW.loopMs in js/motion.js)
   var BREATHE_S = 7;        // two beats per loop (GLOW.beatMs): lights and tiles peak on each
   // 30 frames a second, to match the stream. GIF frame times are whole 1/100 s, so they go
   // 30, 30, 40 ms: exactly 30 a second on average, and each frame lands on a stream frame.
@@ -141,7 +141,7 @@
   // ---------- 3. the moving parts ----------
 
   // The border light: .glow is a 1px ring just inside the card border (a mask, rounded like
-  // the card), lit by a chain of soft dots that travels along it (see GLOW in overlay.js).
+  // the card), lit by a chain of soft dots that travels along it (see GLOW in js/motion.js).
   // Returns the ring's pixels with how much of each pixel the ring covers.
   function ringPixels(doc, glowEl, region) {
     var w = glowEl.offsetWidth, h = glowEl.offsetHeight;
